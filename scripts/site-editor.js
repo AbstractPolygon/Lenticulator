@@ -98,7 +98,9 @@
   btn('edit').addEventListener('click', function () {
     originals = live.map(function (el) { return el.innerHTML; });
     setEditing(true);
-    live[0] && live[0].focus();
+    // keep the reader where they are: focusing the first element would otherwise scroll back to the top
+    var first = live.filter(function (el) { var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; })[0];
+    if (first) first.focus({ preventScroll: true });
   });
   btn('cancel').addEventListener('click', function () {
     live.forEach(function (el, i) { el.innerHTML = originals[i]; });
