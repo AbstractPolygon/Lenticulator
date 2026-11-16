@@ -16,6 +16,9 @@ import { Rect, ViewState } from './ui/view';
 import type { FrameRef, WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
 import { zipStore } from './core/fileformats';
+import { framesForLens, modelInputSize } from './core/depth3d';
+import type { Gray } from './core/gray';
+import type { DepthRequest, DepthResponse } from './depthWorker';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 
 // ---------------------------------------------------------------------------
@@ -58,7 +61,8 @@ function progress(frac: number | null) {
 
 function setBusy(b: boolean) {
   busy = b;
-  for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern']) ($(id) as HTMLButtonElement).disabled = b;
+  for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern', 'btn-depth-estimate', 'btn-depth-load']) ($(id) as HTMLButtonElement).disabled = b;
+  ($('btn-depth-generate') as HTMLButtonElement).disabled = b || !depthSource;
   updateExportButtons();
 }
 
@@ -106,6 +110,15 @@ function syncForm() {
   document.querySelectorAll<HTMLButtonElement>('#export-format [data-format]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
   $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
+  if (s.depthAuto) s.depthFrames = framesForLens(s.lpi, s.dpi);
+  num('d-frames', s.depthFrames, 0);
+  $<HTMLInputElement>('d-frames').disabled = s.depthAuto;
+  $<HTMLInputElement>('d-auto').checked = s.depthAuto;
+  $<HTMLInputElement>('d-amount').value = String(s.depthAmount);
+  $('d-amount-val').textContent = `${s.depthAmount.toFixed(1)}%`;
+  $<HTMLInputElement>('d-focus').value = String(s.depthFocus);
+  $<HTMLInputElement>('d-invert').checked = s.depthInvert;
+  $('depth-panel').hidden = s.mode !== '3d';
   $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
   const pi = SIZE_PRESETS.findIndex(
     (p) => (Math.abs(p.w - s.widthIn) < 1e-3 && Math.abs(p.h - s.heightIn) < 1e-3) ||
@@ -182,6 +195,11 @@ function bindSettings() {
     updateExportButtons();
   });
   on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
+  on('d-frames', 'change', (el) => (S().depthFrames = Math.max(2, Math.min(48, Math.round(+el.value) || 2))));
+  on('d-auto', 'change', (el) => (S().depthAuto = el.checked));
+  on('d-amount', 'input', (el) => (S().depthAmount = +el.value));
+  on('d-focus', 'input', (el) => { S().depthFocus = +el.value; drawDepthThumb(); });
+  on('d-invert', 'change', (el) => { S().depthInvert = el.checked; drawDepthThumb(); });
   on('tiff-import', 'change', (el) => (S().tiffAllPages = el.value === 'all'));
 }
 
@@ -1498,6 +1516,167 @@ async function loadSample(sample: Sample) {
 
 $('app-version').textContent = `v${__APP_VERSION__}`;
 document.title = `Lenticulator ${__APP_VERSION__}`;
+
+// ---------------------------------------------------------------------------
+// Depth from a single photo → generated 3D views
+// ---------------------------------------------------------------------------
+
+/** Source photo and its depth (disparity, 1 = near) used to generate views. */
+let depthSource: { name: string; bitmap: ImageBitmap; depth: Gray } | null = null;
+let depthWorker: Worker | null = null;
+let depthReq = 0;
+
+function estimateDepthIn(rgba: ImageData, onProgress: (stage: string, f: number) => void): Promise<Gray> {
+  depthWorker ??= new Worker(new URL('./depthWorker.ts', import.meta.url), { type: 'module' });
+  const reqId = ++depthReq;
+  const modelBase = new URL('models/depth-anything-v2-small/', location.href).href;
+  return new Promise((resolve, reject) => {
+    const w = depthWorker!;
+    const onMsg = (ev: MessageEvent<DepthResponse>) => {
+      const m = ev.data;
+      if (m.reqId !== reqId) return;
+      if (m.type === 'progress') onProgress(m.stage, m.done / m.total);
+      else {
+        w.removeEventListener('message', onMsg);
+        if (m.type === 'error') reject(new Error(m.message));
+        else resolve({ w: m.width, h: m.height, data: new Float32Array(m.data) });
+      }
+    };
+    w.addEventListener('message', onMsg);
+    w.onerror = (e) => { w.removeEventListener('message', onMsg); depthWorker = null; reject(new Error(e.message || 'depth worker failed')); };
+    const msg: DepthRequest = { type: 'estimate', reqId, modelBase, width: rgba.width, height: rgba.height, data: rgba.data.buffer as ArrayBuffer };
+    w.postMessage(msg, [msg.data]);
+  });
+}
+
+function bitmapPixels(bmp: ImageBitmap, w: number, h: number): ImageData {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const x = c.getContext('2d', { willReadFrequently: true })!;
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(bmp, 0, 0, w, h);
+  return x.getImageData(0, 0, w, h);
+}
+
+function drawDepthThumb() {
+  const c = $<HTMLCanvasElement>('depth-thumb');
+  c.hidden = !depthSource;
+  if (!depthSource) return;
+  const { depth } = depthSource;
+  c.width = depth.w;
+  c.height = depth.h;
+  const img = c.getContext('2d')!.createImageData(depth.w, depth.h);
+  const inv = S().depthInvert, focus = S().depthFocus;
+  for (let i = 0; i < depth.data.length; i++) {
+    const v = inv ? 1 - depth.data[i] : depth.data[i];
+    const g = Math.round(v * 255);
+    // tint the focus plane so it's visible where the print surface will be
+    const near = Math.abs(v - focus) < 0.015;
+    img.data[i * 4] = near ? 255 : g;
+    img.data[i * 4 + 1] = near ? 200 : g;
+    img.data[i * 4 + 2] = near ? 0 : g;
+    img.data[i * 4 + 3] = 255;
+  }
+  c.getContext('2d')!.putImageData(img, 0, 0);
+  ($('btn-depth-generate') as HTMLButtonElement).disabled = busy;
+}
+
+async function estimateDepth() {
+  const f = selFrame() ?? state.frames[0];
+  if (!f) return status('Select a photo first.', 'error');
+  setBusy(true);
+  progress(0);
+  try {
+    status('Loading depth model…', 'info', 120000);
+    const size = modelInputSize(f.width, f.height);
+    const depth = await estimateDepthIn(bitmapPixels(f.bitmap, size.w, size.h), (stage, fr) => {
+      if (stage === 'download') progress(fr);
+      else { progress(null); status('Estimating depth…', 'info', 120000); }
+    });
+    depthSource?.bitmap.close();
+    depthSource = { name: f.name, bitmap: await createImageBitmap(f.bitmap), depth };
+    drawDepthThumb();
+    status('Depth ready.');
+  } catch (e) {
+    status(`Depth estimation failed: ${(e as Error).message}`, 'error', 8000);
+  } finally {
+    setBusy(false);
+    progress(null);
+  }
+}
+
+async function loadDepthMap(file: File) {
+  const f = selFrame() ?? state.frames[0];
+  if (!f) return status('Select a photo first.', 'error');
+  try {
+    const bmp = await decodeAny(file, file.name);
+    const s = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+    const px = bitmapPixels(bmp, w, h);
+    bmp.close();
+    depthSource?.bitmap.close();
+    depthSource = { name: f.name, bitmap: await createImageBitmap(f.bitmap), depth: rgbaToGray(px.data, w, h) };
+    drawDepthThumb();
+  } catch (e) {
+    status(`Could not open ${file.name}: ${(e as Error).message}`, 'error', 6000);
+  }
+}
+
+async function generateFromDepth() {
+  if (!depthSource || busy) return;
+  const s = S();
+  const n = s.depthAuto ? framesForLens(s.lpi, s.dpi) : s.depthFrames;
+  const src = depthSource;
+  const k = Math.min(1, 2048 / Math.max(src.bitmap.width, src.bitmap.height));
+  const w = Math.round(src.bitmap.width * k), h = Math.round(src.bitmap.height * k);
+  setBusy(true);
+  status(`Generating ${n} frames…`, 'info', 120000);
+  try {
+    const px = bitmapPixels(src.bitmap, w, h);
+    const res = await worker.request<Extract<WorkerResponse, { type: 'views' }>>(
+      (reqId) => ({
+        type: 'synth', reqId,
+        image: { width: w, height: h, data: px.data.buffer as ArrayBuffer },
+        depth: { w: src.depth.w, h: src.depth.h, data: src.depth.data.slice().buffer as ArrayBuffer },
+        params: { views: n, amount: (s.depthAmount / 100) * w, focus: s.depthFocus, invert: s.depthInvert },
+      }),
+      [px.data.buffer],
+    );
+    for (const f of [...state.frames]) removeFrame(f.id);
+    state.keyPoint = null;
+    for (let i = 0; i < res.views.length; i++) {
+      const bmp = await createImageBitmap(new ImageData(new Uint8ClampedArray(res.views[i]), res.width, res.height));
+      const c = document.createElement('canvas');
+      c.width = res.width;
+      c.height = res.height;
+      c.getContext('2d')!.drawImage(bmp, 0, 0);
+      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.92));
+      await addFrame(blob!, `${src.name} [${i + 1}/${n}]`, NO_TRANSFORM, true, bmp);
+    }
+    // the middle view is the natural reference
+    state.refId = state.frames[Math.floor(state.frames.length / 2)]?.id ?? null;
+    state.selectedId = state.refId;
+    renderFrameList();
+    updateLensInfo();
+    scheduleRedraw();
+    showTab('preview');
+    status(`Generated ${n} frames.`);
+  } catch (e) {
+    status(`Generating frames failed: ${(e as Error).message}`, 'error', 8000);
+  } finally {
+    setBusy(false);
+    drawDepthThumb();
+  }
+}
+
+$('btn-depth-estimate').addEventListener('click', () => !busy && estimateDepth());
+$('btn-depth-load').addEventListener('click', () => $<HTMLInputElement>('depth-input').click());
+$<HTMLInputElement>('depth-input').addEventListener('change', (e) => {
+  const input = e.target as HTMLInputElement;
+  if (input.files?.[0]) loadDepthMap(input.files[0]).finally(() => (input.value = ''));
+});
+$('btn-depth-generate').addEventListener('click', () => generateFromDepth());
 
 fillStaticOptions();
 bindSettings();

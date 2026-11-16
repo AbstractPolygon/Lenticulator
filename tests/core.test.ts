@@ -236,3 +236,47 @@ describe('jpeg dpi & zip', () => {
     expect(dv.getUint32(z.length - 22, true)).toBe(0x06054b50);
   });
 });
+
+import { framesForLens, modelInputSize, normalizeDepth, synthesizeViews } from '../src/core/depth3d';
+
+describe('depth → views', () => {
+  // 40×10 image: background columns coloured by x; a near "box" (disparity 1) in the middle
+  const W = 40, H = 10;
+  const img = { width: W, height: H, data: new Uint8ClampedArray(W * H * 4) };
+  const depth = makeGray(W, H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const box = x >= 15 && x < 25;
+      img.data[i] = box ? 255 : x * 5; img.data[i + 1] = 0; img.data[i + 2] = box ? 0 : 200; img.data[i + 3] = 255;
+      depth.data[y * W + x] = box ? 1 : 0;
+    }
+
+  it('keeps the focus plane fixed and shifts near content between views', () => {
+    const views = synthesizeViews(img, depth, { views: 3, amount: 8, focus: 0 });
+    expect(views).toHaveLength(3);
+    const redAt = (v: number) => Array.from({ length: W }, (_, x) => views[v].data[(5 * W + x) * 4] === 255 && views[v].data[(5 * W + x) * 4 + 2] === 0)
+      .map((b, x) => (b ? x : -1)).filter((x) => x >= 0);
+    // middle view: box in place; first/last views: box moved left/right by amount/2
+    expect(redAt(1)[0]).toBe(15);
+    expect(redAt(0)[0]).toBe(11);
+    expect(redAt(2)[0]).toBe(19);
+    // background (focus plane) unchanged at the far left
+    expect(views[0].data[(5 * W + 2) * 4]).toBe(10);
+    // no unfilled (transparent) pixels left behind
+    for (const v of views) for (let i = 3; i < v.data.length; i += 4) expect(v.data[i]).toBe(255);
+  });
+
+  it('frames follow the lens', () => {
+    expect(framesForLens(60, 600)).toBe(10);
+    expect(framesForLens(100, 300)).toBe(3);
+    expect(framesForLens(10, 2400)).toBe(48);
+  });
+
+  it('model input is patch aligned and depth is normalised', () => {
+    expect(modelInputSize(4000, 3000)).toEqual({ w: 518, h: 392 });
+    const g = normalizeDepth(Float32Array.from([0, 5, 10, 100]), 2, 2);
+    expect(Math.max(...g.data)).toBeLessThanOrEqual(1);
+    expect(Math.min(...g.data)).toBeGreaterThanOrEqual(0);
+  });
+});

@@ -135,6 +135,31 @@
           </div>
         </details>
 
+        <!-- DEPTH (single photo → 3D) -->
+        <details class="panel" id="depth-panel">
+          <summary>Depth</summary>
+          <canvas id="depth-thumb" class="depth-thumb" width="300" height="200" hidden></canvas>
+          <div class="row">
+            <button id="btn-depth-estimate" class="btn small primary">Estimate depth</button>
+            <button id="btn-depth-load" class="btn small">Load depth map</button>
+            <input id="depth-input" type="file" accept="image/*,.tif,.tiff,.psd,.heic" hidden />
+          </div>
+          <div class="grid2">
+            <label>Frames <input id="d-frames" type="number" min="2" max="48" step="1" /></label>
+            <label class="check"><input id="d-auto" type="checkbox" /> Match LPI</label>
+            <label class="full">Depth <span class="val" id="d-amount-val"></span>
+              <input id="d-amount" type="range" min="0" max="10" step="0.1" />
+            </label>
+            <label class="full">Focus
+              <input id="d-focus" type="range" min="0" max="1" step="0.01" />
+            </label>
+            <label class="check"><input id="d-invert" type="checkbox" /> Invert</label>
+          </div>
+          <div class="row">
+            <button id="btn-depth-generate" class="btn small primary" disabled>Generate frames</button>
+          </div>
+        </details>
+
         <!-- ALIGNMENT -->
         <details open class="panel">
           <summary>Alignment</summary>

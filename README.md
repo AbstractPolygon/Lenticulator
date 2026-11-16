@@ -11,6 +11,13 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - *Whole image: shift only.* Use it for tripod flip and animation frames.
   - *Key subject point (3D).* Click the subject that should sit at the print surface, and every frame is shifted so that point lines up. Foreground and background keep their parallax.
   - Manual fine-tuning: drag in the Align view, use the arrow keys, or type X/Y/rotation/scale. The view has onion-skin, difference, flicker and anaglyph overlays.
+- **Depth from a single photo** (3D mode → Depth panel): click **Estimate depth** to compute a depth map
+  on your device with [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small)
+  (Apache-2.0, about 27 MB, downloaded once from the app's own files), or **Load depth map** to use your own
+  (white = near; tick Invert for maps where white = far). Set **Depth** (total parallax as a % of the width) and
+  **Focus** (which depth sits at the print surface; it shows as a yellow line on the depth preview), then
+  **Generate frames**. With **Match LPI** ticked, the number of frames follows DPI ÷ LPI, one view per printed
+  dot under each lens.
 - **Lens setup:** any LPI (fractional values for calibrated pitch), print DPI, vertical (L/R, 3D) or horizontal (up/down flip) lenses, reverse frame order, strip phase, and anti-aliased *blend* or crisp *nearest* sampling.
 - **Print size presets** (4×6, 5×7, 8×10, Letter, A-sizes …) in inches or mm, fill or fit framing, zoom and pan, and margins with **lens alignment bars** and **crop marks**.
 - **Test patterns**
@@ -38,6 +45,7 @@ See `public/samples/SOURCES.txt`.
 
 ```bash
 npm install
+npm run fetch-model   # depth model (also runs automatically before `npm run build`)
 npm run dev            # web app at http://localhost:5173
 npm test               # unit tests for interlacing, alignment, file formats
 npm run electron:dev   # build and open the desktop app

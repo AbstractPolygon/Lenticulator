@@ -8,6 +8,7 @@ import type { Gray } from './core/gray';
 import { InterlaceJob, LensParams, Orientation, RGBAImage, lensWeights, renderRows } from './core/interlace';
 import { composePage, PageOptions } from './core/patterns';
 import type { Affine } from './core/geometry';
+import { synthesizeViews, ViewParams } from './core/depth3d';
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -31,6 +32,13 @@ export type WorkerRequest =
       page: Omit<PageOptions, 'orientation' | 'lens'>;
     }
   | {
+      type: 'synth';
+      reqId: number;
+      image: { width: number; height: number; data: ArrayBuffer };
+      depth: { w: number; h: number; data: ArrayBuffer };
+      params: ViewParams;
+    }
+  | {
       type: 'align';
       reqId: number;
       ref: Gray;
@@ -43,6 +51,7 @@ export type WorkerResponse =
   | { type: 'progress'; reqId: number; done: number; total: number }
   | { type: 'rendered'; reqId: number; width: number; height: number; data: ArrayBuffer }
   | { type: 'aligned'; reqId: number; results: { index: number; result: AlignResult }[] }
+  | { type: 'views'; reqId: number; width: number; height: number; views: ArrayBuffer[] }
   | { type: 'error'; reqId: number; message: string };
 
 function post(msg: WorkerResponse, transfer: Transferable[] = []) {
@@ -65,6 +74,15 @@ self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
       case 'align':
         align(msg);
         break;
+      case 'synth': {
+        const views = synthesizeViews(
+          { width: msg.image.width, height: msg.image.height, data: new Uint8ClampedArray(msg.image.data) },
+          { w: msg.depth.w, h: msg.depth.h, data: new Float32Array(msg.depth.data) },
+          msg.params,
+        ).map((v) => v.data.buffer as ArrayBuffer);
+        post({ type: 'views', reqId: msg.reqId, width: msg.image.width, height: msg.image.height, views }, views);
+        break;
+      }
     }
   } catch (e) {
     post({ type: 'error', reqId: 'reqId' in msg ? msg.reqId : -1, message: e instanceof Error ? e.message : String(e) });

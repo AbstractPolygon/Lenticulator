@@ -31,6 +31,15 @@ export interface Settings {
   exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
   /** import each Photoshop layer as a frame */
   psdLayers: boolean;
+  /** depth → 3D views */
+  depthFrames: number;
+  /** derive the number of generated views from DPI / LPI */
+  depthAuto: boolean;
+  /** total parallax, % of image width */
+  depthAmount: number;
+  /** disparity kept at the print plane, 0..1 */
+  depthFocus: number;
+  depthInvert: boolean;
   /** import every page of a multi-page TIFF */
   tiffAllPages: boolean;
 }
@@ -57,6 +66,11 @@ export const DEFAULT_SETTINGS: Settings = {
   alignMode: 'keypoint',
   exportFormat: 'png',
   psdLayers: false,
+  depthFrames: 10,
+  depthAuto: true,
+  depthAmount: 3,
+  depthFocus: 0.5,
+  depthInvert: false,
   tiffAllPages: true,
 };
 
