@@ -14,6 +14,8 @@ The page declares the `downloads` capability (saves go through the host's save p
 ## UI text
 - **No description / explanatory text in the UI.** No hint paragraphs, captions, subtitles or
   parenthetical explanations in labels or dropdown options (e.g. "Vertical", not "Vertical (flip L/R, 3D)").
+- **No labels where the control is self-explanatory** (e.g. a slider next to Play, a dropdown whose options
+  name themselves). Use `aria-label` for accessibility instead of visible text.
 - Keep labels short. Short warnings (⚠) and status messages are fine; explanations go in the README.
 
 ## Conventions

@@ -111,9 +111,10 @@ function syncForm() {
   document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
   const is3d = s.mode === '3d';
-  $('preview-mode-wrap').hidden = !is3d;
-  if (!is3d) $<HTMLSelectElement>('preview-mode').value = 'tilt';
-  $('view-label').textContent = is3d ? 'View angle' : 'Tilt';
+  // anaglyph only makes sense for 3D; the comparison overlays work for both
+  const pm = $<HTMLSelectElement>('preview-mode');
+  pm.querySelector<HTMLOptionElement>('option[value=anaglyph]')!.hidden = !is3d;
+  if (!is3d && pm.value === 'anaglyph') pm.value = 'tilt';
   updateLensInfo();
   updateAlignHint();
 }
@@ -517,15 +518,28 @@ function drawPreview() {
   const pos = viewT * (ordered.length - 1);
   const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
   const t = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
-  const draw = (f: Frame, alpha: number) => {
+  const draw = (f: Frame, alpha: number, op: GlobalCompositeOperation = 'source-over') => {
     const m = previewMatrix(f, out);
     // canvas px ← print px ← frame px
     ctx.setTransform(...compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(m)));
     ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = op;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(f.bitmap, 0, 0);
   };
-  if (s.mode === '3d' && $<HTMLSelectElement>('preview-mode').value === 'anaglyph' && ordered.length > 1) {
+  const pmode = $<HTMLSelectElement>('preview-mode').value;
+  // comparison overlays: frame at the current view angle vs the reference frame (★)
+  const cur = ordered[Math.round(pos)];
+  const ref = refFrame() ?? ordered[0];
+  if (pmode === 'onion' || pmode === 'difference' || pmode === 'flicker') {
+    if (pmode === 'flicker') draw(flickerOn ? cur : ref, 1);
+    else {
+      draw(ref, 1);
+      draw(cur, pmode === 'onion' ? 0.5 : 1, pmode === 'difference' ? 'difference' : 'source-over');
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  } else if (s.mode === '3d' && pmode === 'anaglyph' && ordered.length > 1) {
     // left eye sees an earlier frame than the right eye; spacing ≈ a quarter of the sequence
     const sep = Math.max(1, Math.round((ordered.length - 1) / 4));
     const li = Math.min(Math.max(0, Math.round(pos - sep / 2)), ordered.length - 1 - sep);
@@ -670,9 +684,12 @@ function bindViews() {
   for (const id of ['overlay-mode', 'overlay-opacity', 'show-crop']) $(id).addEventListener('input', scheduleRedraw);
 
   setInterval(() => {
-    if ($<HTMLSelectElement>('overlay-mode').value === 'flicker' && !$('tab-align').hidden) {
+    const alignFlicker = $<HTMLSelectElement>('overlay-mode').value === 'flicker' && !$('tab-align').hidden;
+    const previewFlicker = $<HTMLSelectElement>('preview-mode').value === 'flicker' && !$('tab-preview').hidden;
+    if (alignFlicker || previewFlicker) {
       flickerOn = !flickerOn;
-      drawAlign();
+      if (alignFlicker) drawAlign();
+      else drawPreview();
     }
   }, 350);
 
