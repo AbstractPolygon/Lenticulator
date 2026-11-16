@@ -216,10 +216,10 @@ footer.bottom a { color: var(--accent); }
     <a class="brand" href="#"><img src="app/icon.svg" alt="" />Lenticulator</a>
     <nav class="links" aria-label="Sections">
       <a class="opt" href="#features">Features</a>
-      <a class="opt" href="#wiggle">Wigglegrams</a>
+      <a class="opt" href="#wiggle">Wiggle</a>
       <a href="#download">Download</a>
+      <a class="opt" href="#about">About</a>
       <a href="https://github.com/AbstractPolygon/Lenticulator/wiki">Docs</a>
-      <a class="opt" href="https://github.com/AbstractPolygon/Lenticulator">GitHub</a>
     </nav>
   </div>
 </header>
@@ -272,11 +272,11 @@ footer.bottom a { color: var(--accent); }
 
       <div class="feature">
         <div class="text">
-          <h3>Automatic alignment</h3>
-          <p>Frames shot by hand or with a sliding camera rarely line up. Lenticulator corrects shift, rotation and zoom to a fraction of a pixel, or lines every frame up on one subject so a 3D print keeps its depth.</p>
+          <h3>Alignment that does itself</h3>
+          <p>Hand-held shots and sliding-camera frames never line up on their own. Lenticulator fixes shift, rotation and zoom to a fraction of a pixel, or locks every frame onto your subject so your 3D prints keep their depth.</p>
           <ul>
-            <li>Onion skin, difference, flicker and red/cyan overlays</li>
-            <li>Drag or nudge any frame by hand</li>
+            <li>Check your work with onion skin, difference, flicker and red/cyan overlays</li>
+            <li>Nudge any frame by hand when you want the final say</li>
           </ul>
         </div>
         <img class="shot" src="images/align.jpg" width="2160" height="1350" loading="lazy" alt="Align tab with an onion-skin overlay of two views of a toy scene" />
@@ -285,10 +285,10 @@ footer.bottom a { color: var(--accent); }
       <div class="feature flip">
         <div class="text">
           <h3>3D from a single photo</h3>
-          <p>No stereo camera? Estimate depth from one photo on your own computer, choose how deep the effect should be and which distance sits at the print surface, and generate as many views as your lens can show.</p>
+          <p>No stereo camera? No problem. Turn one photo into a full set of 3D views, right on your own computer. Choose how deep the effect feels, pick what sits at the surface of the print, and generate as many views as your lens can show.</p>
           <ul>
-            <li>Or load your own depth map, for example from a phone's portrait mode</li>
-            <li>Frame count follows your printer and lens (DPI ÷ LPI)</li>
+            <li>Already have a depth map, like one from your phone's portrait mode? Bring it along</li>
+            <li>The number of views is matched to your printer and lens (DPI ÷ LPI)</li>
           </ul>
         </div>
         <img class="shot" src="images/depth.jpg" width="2160" height="1350" loading="lazy" alt="Depth panel with a depth map of stacked flower pots and the generated views in the preview" />
@@ -296,19 +296,19 @@ footer.bottom a { color: var(--accent); }
 
       <div class="feature">
         <div class="text">
-          <h3>See it before you print</h3>
-          <p>Move the mouse across the preview to tilt the print. Check depth with red/cyan glasses, play animations back, and export the preview as an animated GIF or video to share.</p>
+          <h3>Know it works before you print</h3>
+          <p>Tilt the preview with your mouse and watch the print come alive. Check depth with red/cyan glasses, play animations back, and share the result as an animated GIF or video, all before you spend a sheet.</p>
         </div>
         <img class="shot" src="images/anaglyph.jpg" width="2160" height="1350" loading="lazy" alt="Anaglyph 3D preview of an aloe plant in dark theme" />
       </div>
 
       <div class="feature flip">
         <div class="text">
-          <h3>Exact interlacing for your lens</h3>
-          <p>Any lens pitch, including fractional LPI, and any printer resolution. Strips are anti-aliased so they stay accurate when the dots per lens aren't a whole number, and every export carries the print DPI so it comes out at the right size.</p>
+          <h3>Built for your lens, to the pixel</h3>
+          <p>Any lens pitch, even fractional LPI, and any printer resolution. Anti-aliased strips stay accurate when the dots per lens aren't a whole number, and every export carries the print DPI, so it prints at exactly the size you set.</p>
           <ul>
-            <li>PNG, JPG and TIFF export, or print directly at actual size</li>
-            <li>Lens alignment bars and crop marks in the margin</li>
+            <li>Export PNG, JPG or TIFF, or print straight at actual size</li>
+            <li>Alignment bars and crop marks in the margin make lining up the lens easy</li>
           </ul>
         </div>
         <img class="shot" src="images/output.jpg" width="2160" height="1350" loading="lazy" alt="Output tab zoomed in on the interlaced strips of a rendered print" />
@@ -316,24 +316,24 @@ footer.bottom a { color: var(--accent); }
 
       <div class="feature">
         <div class="text">
-          <h3>Calibrate with test patterns</h3>
-          <p>A lens rarely matches the pitch printed on its packaging at your viewing distance. Print the pitch test, find the band that flips cleanly between black and white, and use that LPI. A lens ruler and a frame-order test are included too.</p>
+          <h3>Dial in your lens once</h3>
+          <p>A lens rarely matches the pitch printed on its packaging. Print the pitch test, find the band that flips cleanly between black and white, and you've found your true LPI. A lens ruler and a frame-order test are included too, so every print after that comes out right.</p>
         </div>
         <img class="shot" src="images/pitch.jpg" width="2160" height="1350" loading="lazy" alt="Pitch test pattern with labelled bands at slightly different LPI values" />
       </div>
 
       <div class="feature flip">
         <div class="text">
-          <h3>Flip and animation</h3>
-          <p>Switch to Animation for motion and flip effects. Horizontal lenses let both eyes see the same frame, so animations stay clean. Try it with the rotating Earth or Muybridge's animals from the built-in samples.</p>
+          <h3>Make it move</h3>
+          <p>Switch to Animation for flip and motion effects. Horizontal lenses show both eyes the same frame, so movement stays crisp. Start with the spinning Earth or Muybridge's animals in motion from the built-in samples.</p>
         </div>
         <img class="shot" src="images/animation.jpg" width="2160" height="1350" loading="lazy" alt="Animation preview of Muybridge's galloping horse in dark theme" />
       </div>
 
       <div class="more">
-        <div><h3>Every common format</h3><p>JPEG, PNG, WebP, HEIC, TIFF (multi-page), Photoshop PSD (layers as frames) and MPO files from 3D cameras. Drop in whole folders.</p></div>
-        <div><h3>Pick up where you left off</h3><p>Save frames, alignment and every print setting in one project file, and reopen it any time.</p></div>
-        <div><h3>Fast</h3><p>Rendering runs on your graphics card, or on every CPU core, so even large prints at high printer resolution are ready in seconds.</p></div>
+        <div><h3>Bring any photo</h3><p>JPEG, PNG, WebP, HEIC, multi-page TIFF, Photoshop PSD (layers as frames) and MPO files from 3D cameras. Drop in whole folders and go.</p></div>
+        <div><h3>Pick up where you left off</h3><p>Save your frames, alignment and every print setting in one project file. Reopen it any time and carry on.</p></div>
+        <div><h3>Built for speed</h3><p>Rendering uses your graphics card, or every CPU core, so even big prints at high printer resolution are ready in seconds.</p></div>
       </div>
     </div>
   </section>
@@ -347,11 +347,11 @@ footer.bottom a { color: var(--accent); }
       <div class="feature flip">
         <div class="text">
           <h3>3D that moves on its own</h3>
-          <p>A wigglegram rocks back and forth between views taken a little apart. Your eyes read the shift between near and far as depth, with no glasses and no lens, and it plays anywhere a GIF does.</p>
+          <p>A wigglegram rocks back and forth between views shot a little apart. Your brain reads the shift between near and far as depth. No glasses, no lens, and it plays anywhere a GIF does.</p>
           <ul>
-            <li>Load two or more views of one scene, or make them from a single photo with Depth</li>
-            <li>Pick a key point on your subject so every frame lines up on it</li>
-            <li>Export a GIF and set the speed that feels right</li>
+            <li>Load two or more views of a scene, or create them from a single photo with Depth</li>
+            <li>Pick a key point on your subject and every frame locks onto it</li>
+            <li>Export a GIF and set the speed that feels just right</li>
           </ul>
         </div>
         <img class="shot" src="images/wiggle.gif" width="600" height="450" loading="lazy" alt="Animated wigglegram: the clay head stays still while the background and foreground swing around it" />
@@ -363,8 +363,8 @@ footer.bottom a { color: var(--accent); }
     <div class="wrap">
       <div class="head">
         <p class="eyebrow">Documentation</p>
-        <h2>Learn the workflow</h2>
-        <p class="lead">The <a href="https://github.com/AbstractPolygon/Lenticulator/wiki">wiki</a> walks through every step with screenshots.</p>
+        <h2>Go from photo to print.</h2>
+        <p class="lead">The <a href="https://github.com/AbstractPolygon/Lenticulator/wiki">wiki</a> walks you through every step, with screenshots.</p>
       </div>
       <div class="docs">
         <a href="https://github.com/AbstractPolygon/Lenticulator/wiki/Getting-Started"><b>Getting Started</b><span>Install and make your first print</span></a>
@@ -383,7 +383,7 @@ footer.bottom a { color: var(--accent); }
     <div class="wrap center">
       <p class="eyebrow">Download</p>
       <h2>Get Lenticulator.</h2>
-      <p class="lead">Download for your platform, or open it right in your browser.</p>
+      <p class="lead">Free for Windows, macOS and Linux, or open it right in your browser.</p>
       <div class="download">
         <div class="dl" data-os="windows">
           <strong><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>Windows<span class="mine-tag" hidden>Your system</span></strong>
@@ -402,7 +402,7 @@ footer.bottom a { color: var(--accent); }
         </div>
       </div>
       <div class="web-row">
-        <p><strong>No install needed:</strong> the full app also runs in Chrome, Edge, Firefox and Safari.</p>
+        <p><strong>Want to try it first?</strong> The full app runs right in Chrome, Edge, Firefox and Safari. No install needed.</p>
         <a class="btn primary" href="https://abstractpolygon.github.io/Lenticulator/app/">Open in your browser</a>
       </div>
       <p class="release-line"><a href="https://github.com/AbstractPolygon/Lenticulator/releases">All releases</a> · <a href="https://github.com/AbstractPolygon/Lenticulator/wiki/Getting-Started">Installation help</a></p>
@@ -417,10 +417,10 @@ footer.bottom a { color: var(--accent); }
         <article class="upd">
           <header><h3>0.3.15 – 0.3.17</h3><time datetime="2026-11-16">Nov 16, 2026</time></header>
           <ul>
-            <li><strong>New samples.</strong> Sharper 3D scenes, four new ones, a rotating Earth from NASA, and Muybridge's elephant, cat, elk, camel and raccoon.</li>
-            <li><strong>Frame-by-frame GIFs.</strong> GIF export plays your frames as a clean animation, ready to share.</li>
+            <li><strong>Better samples.</strong> Sharper 3D scenes, four new ones, a spinning Earth from NASA, and Muybridge's elephant, cat, elk, camel and raccoon.</li>
+            <li><strong>Share-ready GIFs.</strong> Export your frames as a clean animation, with the speed set the way you like.</li>
             <li><strong>Social sizes.</strong> Presets for Instagram, Stories, Reels, TikTok, YouTube, X, Facebook, LinkedIn and Pinterest.</li>
-            <li><strong>Update check.</strong> The desktop app tells you when a new version is out and links straight to your installer. Samples are now an optional download in Settings.</li>
+            <li><strong>Stay up to date.</strong> The desktop app tells you when a new version is out and links straight to your installer. Samples are now an optional download in Settings.</li>
           </ul>
         </article>
         <article class="upd">
