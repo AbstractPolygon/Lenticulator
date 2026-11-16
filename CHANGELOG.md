@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.29
+- **Split scan** (Frames panel): splits the selected frame, a film scan with 2, 3 or 4 frames side by side (Nimslo,
+  Nishika, Reto3D …), into separate equal-size frames, finding the gaps and trimming the film border.
+
 ## 0.3.28
 - **Crop to overlap** (Alignment panel): frames the print on the area every frame covers, so no blank edges show in
   the print, GIF or video. **Auto crop** (Framing & page, on by default) does this after every auto-align.

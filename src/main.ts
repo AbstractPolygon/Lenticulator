@@ -15,6 +15,7 @@ import { Rect, ViewState } from './ui/view';
 import type { WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
 import { zipStore } from './core/fileformats';
+import { scanProfiles, splitScan } from './core/split';
 import { framesForLens } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
@@ -390,6 +391,37 @@ async function replaceFrames(items: { blob: Blob; name: string; bitmap: ImageBit
   updateLensInfo();
   scheduleRedraw();
   showTab('preview');
+}
+
+/** Split one frame (a film scan with frames side by side) into `count` frames, in its place. */
+async function splitFrame(frame: Frame, count: number) {
+  // brightness profiles on a reduced copy (fast), mapped back to full resolution
+  const k = Math.min(1, 1600 / Math.max(frame.width, frame.height));
+  const { c, ctx } = canvas2d(frame.width * k, frame.height * k, true);
+  ctx.drawImage(frame.bitmap, 0, 0, c.width, c.height);
+  const { data } = ctx.getImageData(0, 0, c.width, c.height);
+  const { columns, rows } = scanProfiles(data, c.width, c.height);
+  const rects = splitScan(columns, rows, count);
+  const at = state.frames.indexOf(frame);
+  const wasRef = state.refId === frame.id;
+  const made: Frame[] = [];
+  for (let i = 0; i < rects.length; i++) {
+    const r = rects[i];
+    const bmp = await createImageBitmap(frame.bitmap, Math.round(r.x / k), Math.round(r.y / k), Math.round(r.w / k), Math.round(r.h / k));
+    const blob = await encodeBitmap(bmp, 'image/png');
+    made.push(await addFrame(blob, `${frame.name.replace(/\.\w+$/, '')} ${i + 1}`, NO_TRANSFORM, true, bmp));
+  }
+  // addFrame appends: move the new frames into the scan's place, then drop the scan
+  state.frames.splice(state.frames.length - made.length, made.length);
+  state.frames.splice(at + 1, 0, ...made);
+  removeFrame(frame.id);
+  if (wasRef || !state.frames.some((f) => f.id === state.refId)) state.refId = made[0].id;
+  state.selectedId = made[0].id;
+  state.keyPoint = null;
+  renderFrameList();
+  updateLensInfo();
+  scheduleRedraw();
+  status(`Split into ${made.length} frames (${made[0].width}×${made[0].height}).`);
 }
 
 function refFrame(): Frame | undefined {
@@ -1402,6 +1434,14 @@ function bindChrome() {
   $('btn-save-project').addEventListener('click', saveProject);
   $('btn-import').addEventListener('click', () => $<HTMLInputElement>('file-input').click());
   $('btn-open-project').addEventListener('click', () => $<HTMLInputElement>('project-input').click());
+  $('split-scan').addEventListener('change', async (e) => {
+    const sel = e.target as HTMLSelectElement;
+    const count = +sel.value;
+    sel.value = '';
+    const f = selFrame();
+    if (!f || busy || !count) return;
+    try { await splitFrame(f, count); } catch (err) { status(`Could not split: ${(err as Error).message}`, 'error', 6000); }
+  });
   $('btn-reverse-order').addEventListener('click', () => {
     state.frames.reverse();
     renderFrameList();

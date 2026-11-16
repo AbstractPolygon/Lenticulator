@@ -288,3 +288,4 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
 #view:focus-visible { outline: none; }
 #view:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
 #view:focus-visible::-moz-range-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
+select.small { width: auto; flex: 0 1 auto; padding: 3px 6px; font-size: 12px; }
