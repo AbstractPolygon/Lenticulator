@@ -1356,7 +1356,10 @@ fetch('samples/index.json')
           `<button class="menu-item" role="menuitem" data-sample="${x.id}">${escapeHtml(x.name)}<small>${x.files.length}</small></button>`).join('')}
       </section>`).join('');
   })
-  .catch(() => { $('btn-samples').hidden = true; });
+  .catch((e) => {
+    $('samples-list').innerHTML = '<div class="menu-heading">⚠ Samples unavailable</div>';
+    status(`Could not load the sample list: ${(e as Error).message}`, 'error', 6000);
+  });
 
 $('samples-list').addEventListener('click', (e) => {
   const id = (e.target as HTMLElement).closest<HTMLElement>('[data-sample]')?.dataset.sample;
@@ -1383,9 +1386,11 @@ async function loadSample(sample: Sample) {
     }));
     for (const f of [...state.frames]) removeFrame(f.id);
     state.keyPoint = null;
-    Object.assign(S(), { mode: sample.mode }, MODE_DEFAULTS[sample.mode]);
-    saveSettings(S());
-    syncForm();
+    if (S().mode !== sample.mode) {
+      Object.assign(S(), { mode: sample.mode }, MODE_DEFAULTS[sample.mode]);
+      saveSettings(S());
+      syncForm();
+    }
     await importFiles(blobs, sample.files.map((f) => `${sample.name} ${f.replace(/\.\w+$/, '')}`));
     showTab('preview');
   } catch (e) {
