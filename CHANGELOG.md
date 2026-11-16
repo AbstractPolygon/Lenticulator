@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.31
+- Video export can play the **Frames** (like the GIF, with its fps, loop and hold) for Reels and TikTok, or record the
+  **Tilt** preview as before. Frames is the default.
+
 ## 0.3.30
 - GIF timing: **Back and forth** or **Loop** (defaults: back and forth for 3D, loop for Animation), and a **hold** that
   shows the first and last frames longer.

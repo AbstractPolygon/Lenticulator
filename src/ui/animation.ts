@@ -72,15 +72,15 @@ export function videoFormat(): { mime: string; ext: 'mp4' | 'webm' } | null {
   return options.find((o) => MediaRecorder.isTypeSupported(o.mime)) ?? null;
 }
 
-/** Records in real time: `loops` sweeps at `fps`. */
+/** Records in real time: the steps (position + duration), `loops` times. */
 export async function recordVideo(
-  draw: DrawFn, w: number, h: number, positions: number[], fps: number, loops = 2,
+  draw: DrawFn, w: number, h: number, steps: Step[], loops = 2,
   onProgress?: (f: number) => void,
 ): Promise<{ blob: Blob; ext: 'mp4' | 'webm' }> {
   const fmt = videoFormat();
   if (!fmt) throw new Error('video recording is not supported in this browser');
   const { c, ctx } = canvas(w, h);
-  draw(ctx, w, h, positions[0]);
+  draw(ctx, w, h, steps[0].pos);
   const stream = c.captureStream(0);
   const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
   const rec = new MediaRecorder(stream, { mimeType: fmt.mime, videoBitsPerSecond: 8_000_000 });
@@ -91,15 +91,17 @@ export async function recordVideo(
     rec.onerror = () => reject(new Error('recording failed'));
   });
   rec.start();
-  const total = positions.length * loops;
+  const total = steps.length * loops;
   const t0 = performance.now();
+  let at = 0;
   for (let i = 0; i < total; i++) {
-    draw(ctx, w, h, positions[i % positions.length]);
+    const step = steps[i % steps.length];
+    draw(ctx, w, h, step.pos);
     track.requestFrame?.();
     onProgress?.((i + 1) / total);
-    // pace frames in real time so the video plays at the right speed
-    const wait = t0 + ((i + 1) * 1000) / fps - performance.now();
-    await new Promise((r) => setTimeout(r, Math.max(0, wait)));
+    // pace frames in real time so the video plays at the right speed (and holds last as long as asked)
+    at += step.ms;
+    await new Promise((r) => setTimeout(r, Math.max(0, t0 + at - performance.now())));
   }
   rec.stop();
   await done;

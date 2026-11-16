@@ -159,7 +159,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .row > label { margin-bottom: 0; }
 /* a checkbox next to a captioned field (e.g. Frames | Match LPI) sits level with the field, not its caption */
 .grid2 > label.check { align-self: end; min-height: 30px; }
-#gif-fps, #video-loops, #gif-dither, #gif-loop, #gif-hold { height: 30px; box-sizing: border-box; }
+#gif-fps, #video-loops, #gif-dither, #gif-loop, #gif-hold, #video-source { height: 30px; box-sizing: border-box; }
 #gif-hold { width: 72px; }
 
 .seg { display: inline-flex; padding: 2px; gap: 2px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; }

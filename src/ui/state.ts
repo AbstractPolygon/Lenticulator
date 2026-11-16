@@ -41,6 +41,8 @@ export interface Settings {
   gifHold: number;
   /** video: how many back-and-forth sweeps to record */
   videoLoops: number;
+  /** video: the frames (like the GIF) or the tilt preview */
+  videoSource: 'frames' | 'tilt';
   /** import each Photoshop layer as a frame */
   psdLayers: boolean;
   /** depth → 3D views */
@@ -83,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gifLoop: 'pingpong',
   gifHold: 0,
   videoLoops: 2,
+  videoSource: 'frames',
   psdLayers: false,
   depthFrames: 10,
   depthAuto: true,

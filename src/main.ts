@@ -123,8 +123,12 @@ function syncForm() {
   $<HTMLSelectElement>('gif-dither').value = s.gifDither;
   $<HTMLSelectElement>('gif-loop').value = s.gifLoop;
   num('gif-hold', s.gifHold, 0);
-  $('gif-timing').hidden = s.exportFormat !== 'gif';
-  $('gif-speed').hidden = s.exportFormat !== 'gif';
+  // fps, loop and hold apply to GIFs and to frame videos; dithering only to GIFs
+  const frameAnim = s.exportFormat === 'gif' || (s.exportFormat === 'video' && s.videoSource === 'frames');
+  $('gif-timing').hidden = !frameAnim;
+  $<HTMLSelectElement>('video-source').value = s.videoSource;
+  $('gif-speed').hidden = !(s.exportFormat === 'gif' || (s.exportFormat === 'video' && s.videoSource === 'frames'));
+  $('gif-dither').hidden = s.exportFormat !== 'gif';
   num('video-loops', s.videoLoops, 0);
   $('video-loops-row').hidden = s.exportFormat !== 'video';
   $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
@@ -222,6 +226,7 @@ function bindSettings() {
     showAnim(!$('tab-output').hidden);
   });
   on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
+  on('video-source', 'change', (el) => (S().videoSource = el.value as Settings['videoSource']));
   on('gif-loop', 'change', (el) => (S().gifLoop = el.value as Settings['gifLoop']));
   on('gif-hold', 'change', (el) => (S().gifHold = Math.max(0, Math.min(2000, Math.round(+el.value) || 0))));
   on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
@@ -1294,10 +1299,11 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   const social = SIZE_PRESETS[matchPreset(s)];
   const { w, h } = social?.px ? animSize(social.w / social.h, Math.max(social.w, social.h))
     : animSize(s.widthIn / s.heightIn, kind === 'gif' ? 800 : 1280);
-  const steps = frameSequence(frames.length, s.gifLoop, s.gifFps, s.gifHold);
-  const positions = sweepPositions(frames.length, 4);
-  const fps = 25;
-  const base = kind === 'gif' ? `animation_${frames.length}f` : `lenticular_preview_${frames.length}f`;
+  // GIF and frame videos: the frames with their timing; tilt videos: a smooth sweep at 25 fps
+  const tilt = kind === 'video' && s.videoSource === 'tilt';
+  const steps = tilt ? sweepPositions(frames.length, 4).map((pos) => ({ pos, ms: 40 }))
+    : frameSequence(frames.length, s.gifLoop, s.gifFps, s.gifHold);
+  const base = tilt ? `lenticular_preview_${frames.length}f` : `animation_${frames.length}f`;
   setBusy(true);
   progress(0);
   status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
@@ -1305,7 +1311,7 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
     const key = animKey(kind);
     const out = kind === 'gif'
       ? { blob: await encodeGif(drawPlain, w, h, steps, progress, s.gifDither), ext: 'gif' }
-      : await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
+      : await recordVideo(tilt ? drawTilt : drawPlain, w, h, steps, s.videoLoops, progress);
     if (anim) URL.revokeObjectURL(anim.url);
     anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key, w, h };
     showTab('output');

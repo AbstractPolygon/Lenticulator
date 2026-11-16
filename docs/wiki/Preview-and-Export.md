@@ -40,7 +40,7 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 | **JPG** | Rendered print, tagged with the print DPI. |
 | **TIF** | Rendered print, uncompressed, tagged with the print DPI. |
 | **GIF** | Animated GIF of the aligned frames, one GIF frame per frame (no render needed). Set the speed in frames per second (1–50, default 10) and the dithering (none, Floyd–Steinberg, Atkinson (default) or ordered) next to the format buttons. Choose **Back and forth** (wigglegram) or **Loop** (one way), and a **hold** in milliseconds to linger on the first and last frames. Dithering smooths gradients in the GIF's 256 colours; ordered gives a regular, retro pattern. Animations loop forward; 3D views rock back and forth. |
-| **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). Set how many times it tilts back and forth (1–20 loops, default 2) next to the format buttons. |
+| **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). Choose **Frames** to play the frames like the GIF (same fps, loop and hold; good for Reels and TikTok) or **Tilt** to record the tilt preview, and how many times it plays through (1–20 loops, default 2). |
 
 **Print…** prints at the exact physical size. Turn off printer scaling and borderless expansion.
 
