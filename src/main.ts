@@ -212,6 +212,7 @@ function bindSettings() {
     saveSettings(S());
     syncForm();
     updateExportButtons();
+    showAnim(!$('tab-output').hidden);
   });
   on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
   on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
@@ -1160,9 +1161,27 @@ function gifPositions(n: number, mode: Settings['mode']): number[] {
   return mode === 'animation' ? fwd : [...fwd, ...fwd.slice(1, -1).reverse()];
 }
 
-async function exportAnimation(kind: 'gif' | 'video') {
+/** The last rendered GIF / video, shown in the Output tab; `key` says which frames and settings made it. */
+let anim: { kind: 'gif' | 'video'; blob: Blob; name: string; url: string; key: string } | null = null;
+const animKey = (kind: 'gif' | 'video') => JSON.stringify([kind, S(), activeFrames().map((f) => [f.id, f.transform])]);
+
+function showAnim(on: boolean) {
+  const view = $('anim-view');
+  const visible = on && !!anim && anim.kind === S().exportFormat;
+  view.hidden = !visible;
+  if (!visible) { view.replaceChildren(); return; }
+  if (view.dataset.url === anim!.url) return;
+  view.dataset.url = anim!.url;
+  const el = anim!.kind === 'gif' ? Object.assign(document.createElement('img'), { alt: 'Rendered GIF' })
+    : Object.assign(document.createElement('video'), { autoplay: true, loop: true, muted: true, controls: true, playsInline: true });
+  el.src = anim!.url;
+  view.replaceChildren(el);
+  $('output-title').textContent = anim!.name;
+}
+
+async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   const frames = activeFrames();
-  if (frames.length < 2) return status('Need at least two frames.', 'error');
+  if (frames.length < 2) { status('Need at least two frames.', 'error'); return false; }
   const s = S();
   // GIF: the aligned frames themselves, one GIF frame each; video: the tilt preview
   const social = SIZE_PRESETS[matchPreset(s)];
@@ -1175,15 +1194,15 @@ async function exportAnimation(kind: 'gif' | 'video') {
   progress(0);
   status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
   try {
-    if (kind === 'gif') {
-      const blob = await encodeGif(drawPlain, w, h, positions, fps, progress, s.gifDither);
-      await download(blob, `${base}.gif`);
-      status(`Saved ${(blob.size / 1e6).toFixed(1)} MB GIF (${w}×${h}).`);
-    } else {
-      const { blob, ext } = await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
-      await download(blob, `${base}.${ext}`);
-      status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${ext.toUpperCase()} (${w}×${h}).`);
-    }
+    const key = animKey(kind);
+    const out = kind === 'gif'
+      ? { blob: await encodeGif(drawPlain, w, h, positions, fps, progress, s.gifDither), ext: 'gif' }
+      : await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
+    if (anim) URL.revokeObjectURL(anim.url);
+    anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key };
+    showTab('output');
+    status(`Rendered ${(out.blob.size / 1e6).toFixed(1)} MB ${out.ext.toUpperCase()} (${w}×${h}).`);
+    return true;
   } finally {
     setBusy(false);
     progress(null);
@@ -1194,7 +1213,12 @@ async function exportAnimation(kind: 'gif' | 'video') {
 async function exportResult() {
   const fmt0 = S().exportFormat;
   if (fmt0 === 'gif' || fmt0 === 'video') {
-    try { await exportAnimation(fmt0); } catch (e) { status(`Export failed: ${(e as Error).message}`, 'error', 8000); }
+    try {
+      // render first if nothing matching the current frames and settings has been rendered yet
+      if (!anim || anim.key !== animKey(fmt0)) { if (!(await renderAnimation(fmt0))) return; }
+      await download(anim!.blob, anim!.name);
+      status(`Saved ${(anim!.blob.size / 1e6).toFixed(1)} MB ${anim!.name.split('.').pop()!.toUpperCase()}.`);
+    } catch (e) { status(`Export failed: ${(e as Error).message}`, 'error', 8000); }
     return;
   }
   if (!result) return;
@@ -1285,7 +1309,7 @@ function showTab(name: string) {
     b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   for (const t of ['preview', 'align', 'output']) $(`tab-${t}`).hidden = t !== name;
   // draw right away so the view's layout (used for clicks, e.g. picking the key point) is current
-  if (name === 'output') drawOutput();
+  if (name === 'output') { drawOutput(); showAnim(true); }
   else if (name === 'align') drawAlign();
   else drawPreview();
 }
@@ -1336,7 +1360,12 @@ function bindChrome() {
     renderFrameList();
     scheduleRedraw();
   });
-  $('btn-render').addEventListener('click', () => !busy && renderPrint());
+  $('btn-render').addEventListener('click', () => {
+    if (busy) return;
+    const fmt = S().exportFormat;
+    if (fmt === 'gif' || fmt === 'video') renderAnimation(fmt).catch((e) => status(`Render failed: ${(e as Error).message}`, 'error', 8000));
+    else renderPrint();
+  });
   $('btn-pattern').addEventListener('click', () => !busy && generatePattern());
   $('btn-download').addEventListener('click', exportResult);
   $('btn-print').addEventListener('click', () => result && printResult(result).catch((e) => status(e.message, 'error')));

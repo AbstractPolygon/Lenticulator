@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.23
+- GIF and video: **Render** now makes the animation (not the lenticular print) and plays it in the Output tab;
+  **Download** saves it (rendering first if frames or settings changed since).
+- Preview: **Smooth** is off by default, and the playhead is a tall rectangle.
+
 ## 0.3.22
 - Dark theme: the accent colour is blue instead of violet, matching the website.
 

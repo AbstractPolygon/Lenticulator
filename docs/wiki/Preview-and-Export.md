@@ -5,7 +5,7 @@
 The **Preview** tab simulates tilting the finished print.
 
 - Move the mouse across the preview, drag the slider, or press **Play**.
-- **Smooth** blends between neighbouring frames.
+- **Smooth** blends between neighbouring frames (off by default).
 - The mode dropdown switches between **Tilt** and the comparison overlays **Onion skin**, **Difference** and **Flicker** (current view versus the reference frame). **Anaglyph** (3D only) shows two views in red/cyan for viewing with 3D glasses.
 
 ![Anaglyph preview](images/preview-anaglyph.jpg)
@@ -31,7 +31,7 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 
 ![Render and export panel](images/export-panel.png)
 
-1. Choose a format, then click **Render** to interlace the frames at full print resolution. The result appears in the **Output** tab.
+1. Choose a format, then click **Render** to interlace the frames at full print resolution. The result appears in the **Output** tab. For **GIF** and **Video**, **Render** makes the animation instead and plays it in the *Output* tab; **Download** saves it.
 2. Click **Download**.
 
 | Format | Contents |

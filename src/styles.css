@@ -269,3 +269,17 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
 .dialog-actions .btn { text-decoration: none; }
 #gif-fps, #video-loops { width: 64px; }
 #gif-dither { width: auto; flex: 1; }
+
+/* rendered GIF / video shown in the Output tab */
+.anim-view { position: absolute; inset: 0; display: grid; place-items: center; background: var(--stage); padding: 16px; }
+.anim-view img, .anim-view video { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 24px rgba(0,0,0,.35); }
+
+/* playhead (view angle slider): a rectangle, taller than wide */
+#view { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }
+#view::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 45%, var(--panel-2)); }
+#view::-moz-range-track { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 45%, var(--panel-2)); }
+#view::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 20px; margin-top: -8px; border-radius: 2px; background: var(--accent); border: 1px solid var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+#view::-moz-range-thumb { width: 8px; height: 20px; border-radius: 2px; background: var(--accent); border: 1px solid var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+#view:focus-visible { outline: none; }
+#view:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
+#view:focus-visible::-moz-range-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
