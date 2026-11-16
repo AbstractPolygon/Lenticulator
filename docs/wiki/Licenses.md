@@ -1,5 +1,7 @@
 # Licenses
 
+For a summary of credits, see [About](About).
+
 ## Lenticulator
 
 Lenticulator is licensed under the **[PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0)**. You may use, change and share it for any purpose except providing a product that competes with it. See [`LICENSE`](https://github.com/AbstractPolygon/Lenticulator/blob/main/LICENSE).

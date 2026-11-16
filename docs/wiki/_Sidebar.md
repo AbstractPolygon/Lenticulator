@@ -9,5 +9,6 @@
 - [Preview and Export](Preview-and-Export)
 - [Settings and Projects](Settings-and-Projects)
 - [Licenses](Licenses)
+- [About](About)
 
 [Source code](https://github.com/AbstractPolygon/Lenticulator)

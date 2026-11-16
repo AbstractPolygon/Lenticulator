@@ -17,6 +17,7 @@ Lenticulator turns a set of images into an **interlaced print for lenticular len
 - [Preview and Export](Preview-and-Export): tilt preview, overlays, zoom, PNG/JPG/TIFF/GIF/video, printing
 - [Settings and Projects](Settings-and-Projects): themes, panel location, import options, projects, keyboard shortcuts
 - [Licenses](Licenses): app, model and library licenses
+- [About](About): who makes Lenticulator, credits and sample image sources
 
 ## Key terms
 
