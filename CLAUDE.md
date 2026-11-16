@@ -37,6 +37,9 @@ The page declares the `downloads` capability (saves go through the host's save p
   Build it with `node scripts/build-site-artifact.mjs` and publish `artifact-site/lenticulator-site.html` (declares the
   `artifact` capability). When the user saves edits there, read the artifact and copy its `#page` block back into
   `site/index.html`, then republish both.
+- **Whenever the user saves a webpage edit in the artifact, push it live right away** (user requirement): merge the
+  text into `site/index.html` on `main`, commit and push, so GitHub Pages deploys it. Unapproved design trials (e.g. a
+  font trial on a branch) stay off `main`; merge the edit into the trial branch too.
 
 ## Conventions
 - Version lives in `package.json` (shown next to the app name). **Bump it with every change, patch only**:
