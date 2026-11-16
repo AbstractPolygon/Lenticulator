@@ -489,11 +489,11 @@ function contentFrame(ctx: CanvasRenderingContext2D, r: Rect, fill: string) {
   ctx.restore();
 }
 
+/** The shared zoom controls (tab row) show the zoom of whichever view is open. */
 function updateZoomLabels() {
-  for (const name of Object.keys(views) as ViewName[]) {
-    const el = document.querySelector<HTMLElement>(`.zoom[data-view=${name}] .zoom-label`);
-    if (el) el.textContent = `${Math.round(views[name].percent(dprNow()))}%`;
-  }
+  const name = currentView();
+  const el = document.querySelector<HTMLElement>('#zoom-controls .zoom-label');
+  if (el && name) el.textContent = `${Math.round(views[name].percent(dprNow()))}%`;
 }
 
 function previewMatrix(f: Frame, out: { w: number; h: number }): Affine {
@@ -786,12 +786,10 @@ function zoomCommand(name: ViewName, cmd: string) {
 }
 
 function bindZoom() {
-  document.querySelectorAll<HTMLElement>('.zoom').forEach((group) => {
-    const name = group.dataset.view as ViewName;
-    group.addEventListener('click', (e) => {
-      const cmd = (e.target as HTMLElement).closest<HTMLElement>('[data-z]')?.dataset.z;
-      if (cmd) zoomCommand(name, cmd);
-    });
+  $('zoom-controls').addEventListener('click', (e) => {
+    const cmd = (e.target as HTMLElement).closest<HTMLElement>('[data-z]')?.dataset.z;
+    const name = currentView();
+    if (cmd && name) zoomCommand(name, cmd);
   });
 
   for (const name of Object.keys(canvasOf) as ViewName[]) {

@@ -217,11 +217,19 @@
       </aside>
 
       <main class="stage">
-        <nav class="tabs" role="tablist">
-          <button role="tab" data-tab="preview" aria-selected="true">Preview</button>
-          <button role="tab" data-tab="align">Align</button>
-          <button role="tab" data-tab="output">Output</button>
-        </nav>
+        <div class="tabbar">
+          <nav class="tabs" role="tablist">
+            <button role="tab" data-tab="preview" aria-selected="true">Preview</button>
+            <button role="tab" data-tab="align">Align</button>
+            <button role="tab" data-tab="output">Output</button>
+          </nav>
+          <div class="zoom" id="zoom-controls" role="group" aria-label="Zoom">
+              <button class="btn small" data-z="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
+              <button class="btn small zoom-label" data-z="actual" title="Actual pixels (1)">100%</button>
+              <button class="btn small" data-z="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
+              <button class="btn small" data-z="fit" title="Fit to window (0)">Fit</button>
+            </div>
+        </div>
 
         <section id="tab-preview" class="tab-pane" role="tabpanel">
           <div class="canvas-wrap"><canvas id="preview-canvas"></canvas></div>
@@ -237,12 +245,6 @@
                 <option value="anaglyph">Anaglyph 3D (red/cyan)</option>
               </select>
             </label>
-            <div class="zoom" data-view="preview" role="group" aria-label="Zoom">
-              <button class="btn small" data-z="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
-              <button class="btn small zoom-label" data-z="actual" title="Actual pixels (1)">100%</button>
-              <button class="btn small" data-z="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
-              <button class="btn small" data-z="fit" title="Fit to window (0)">Fit</button>
-            </div>
           </div>
           <p class="hint center">Move the mouse across the preview to “tilt” the print · scroll to zoom</p>
         </section>
@@ -261,12 +263,6 @@
             </label>
             <label class="grow">Opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.01" value="0.5" /></label>
             <label class="check"><input id="show-crop" type="checkbox" checked /> Show print area</label>
-            <div class="zoom" data-view="align" role="group" aria-label="Zoom">
-              <button class="btn small" data-z="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
-              <button class="btn small zoom-label" data-z="actual" title="Actual pixels (1)">100%</button>
-              <button class="btn small" data-z="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
-              <button class="btn small" data-z="fit" title="Fit to window (0)">Fit</button>
-            </div>
           </div>
         </section>
 
@@ -274,12 +270,6 @@
           <div class="canvas-wrap" id="output-wrap"><canvas id="output-canvas"></canvas></div>
           <div class="toolbar">
             <span id="output-title" class="grow">Nothing rendered yet.</span>
-            <div class="zoom" data-view="output" role="group" aria-label="Zoom">
-              <button class="btn small" data-z="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
-              <button class="btn small zoom-label" data-z="actual" title="Actual pixels (1)">100%</button>
-              <button class="btn small" data-z="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
-              <button class="btn small" data-z="fit" title="Fit to window (0)">Fit</button>
-            </div>
           </div>
         </section>
         <div id="status" class="status" role="status" aria-live="polite"></div>

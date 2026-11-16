@@ -195,7 +195,8 @@ body.dragging .drop-overlay { display: flex; }
 .manual legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
 .manual:disabled { opacity: .5; }
 
-.tabs { display: flex; gap: 2px; padding: 6px 10px 0; background: var(--bg); }
+.tabbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px 0; background: var(--bg); flex-wrap: wrap; }
+.tabs { display: flex; gap: 2px; align-self: flex-end; }
 .tabs button {
   border: 1px solid transparent; border-bottom: none; background: transparent; color: var(--muted);
   padding: 7px 14px; border-radius: 6px 6px 0 0; font: inherit; font-weight: 600; cursor: pointer;
@@ -209,7 +210,7 @@ body.dragging .drop-overlay { display: flex; }
 #align-canvas.picking { cursor: crosshair; }
 #align-canvas.dragging, .canvas-wrap canvas.panning { cursor: grabbing; }
 body.space-pan .canvas-wrap canvas { cursor: grab; }
-.zoom { display: inline-flex; gap: 2px; align-items: center; margin-left: auto; }
+.zoom { display: inline-flex; gap: 2px; align-items: center; margin-left: auto; padding-bottom: 4px; }
 .zoom .btn { min-width: 30px; }
 .zoom .zoom-label { min-width: 58px; font-variant-numeric: tabular-nums; }
 .toolbar {
@@ -226,7 +227,7 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
 .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
 
 .status {
-  position: absolute; top: 46px; right: 16px; max-width: 420px; background: var(--panel); color: var(--text);
+  position: absolute; top: 56px; right: 16px; max-width: 420px; background: var(--panel); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
   opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; pointer-events: none;
 }
