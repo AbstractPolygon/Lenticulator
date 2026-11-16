@@ -15,7 +15,7 @@ npm run dev
 |---|---|---|
 | Linux | `Lenticulator-<version>-linux-x86_64.AppImage` | Make it executable (`chmod +x`) and run it. |
 | Linux | `Lenticulator-<version>-linux-amd64.snap` | `sudo snap install --dangerous Lenticulator-<version>-linux-amd64.snap` |
-| Windows | `Lenticulator-Setup-<version>-x64.exe` (or `-arm64`) | Run the installer. Choose "More info → Run anyway" if SmartScreen warns about an unsigned app. |
+| Windows | `Lenticulator-Setup-<version>-x64.exe` (or `-arm64`, or `-ia32` for 32-bit Windows) | Run the installer. Choose "More info → Run anyway" if SmartScreen warns about an unsigned app. |
 | macOS | `Lenticulator-<version>-mac-arm64.dmg` (Apple silicon) or `-x64.dmg` (Intel) | Drag Lenticulator to Applications. The first time, right-click it and choose **Open**, because the app isn't signed. |
 
 The desktop app works fully offline, including depth estimation.

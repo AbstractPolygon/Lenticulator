@@ -20,6 +20,8 @@ import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat }
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
 import { CompareMode, drawCompare, drawTilt as drawTiltFrames } from './ui/draw';
 import { PoolFrame, RenderPool, newRenderWorker } from './ui/renderPool';
+import { gpuAvailable, renderGpu } from './ui/gpuRender';
+import { composePage } from './core/patterns';
 import { bindMenu, bindPref } from './ui/menus';
 import { initDepthPanel } from './ui/depthPanel';
 
@@ -949,18 +951,33 @@ async function runRender(frames: Omit<PoolFrame, 'matrix'>[], matrices: Affine[]
   status(`Rendering ${w}×${h}…`, 'info', 60000);
   const t0 = performance.now();
   try {
-    const page = await pool.render({
+    const job = {
       width: w, height: h, orientation: s.orientation,
       lens: { lpi: s.lpi, dpi: s.dpi, frames: frames.length, phase: s.phase, reverse: s.reverse, sampling: s.sampling },
       frames: frames.map((f, i) => ({ ...f, matrix: matrices[i] })),
       background: hexToRgb(s.background),
       page: { margin: s.marginIn * s.dpi, alignBars: s.alignBars, cropMarks: s.cropMarks },
-    }, progress);
+    };
+    // GPU when chosen (or available in Auto); any GPU failure falls back to the CPU workers
+    let page: Awaited<ReturnType<typeof pool.render>> | null = null;
+    let engine = 'CPU', gpuNote = '';
+    if (renderer !== 'cpu' && gpuAvailable()) {
+      try {
+        const img = await renderGpu(job as Parameters<typeof renderGpu>[0], progress);
+        page = composePage(img, { ...job.page, orientation: job.orientation, lens: job.lens });
+        engine = 'GPU';
+      } catch (e) {
+        gpuNote = ` (GPU unavailable: ${(e as Error).message})`;
+      }
+    } else if (renderer === 'gpu') {
+      gpuNote = ' (GPU unavailable in this browser)';
+    }
+    page ??= await pool.render(job, progress);
     const { c: canvas, ctx } = canvas2d(page.width, page.height);
     ctx.putImageData(new ImageData(page.data as Uint8ClampedArray<ArrayBuffer>, page.width, page.height), 0, 0);
     // the pixels now live only in the canvas (TIFF export reads them back when needed)
     setResult({ canvas, width: page.width, height: page.height, dpi: s.dpi, title, fileBase });
-    status(`Rendered in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
+    status(`Rendered in ${((performance.now() - t0) / 1000).toFixed(1)} s on the ${engine}.${gpuNote}`, gpuNote ? 'error' : 'info', gpuNote ? 7000 : 3500);
   } finally {
     setBusy(false);
     progress(null);
@@ -1353,6 +1370,10 @@ if (inArtifactHost()) {
   // the sandboxed viewer can't open print dialogs
   $('btn-print').hidden = true;
 }
+
+// Render engine (per-device preference)
+let renderer = 'auto';
+bindPref($<HTMLSelectElement>('renderer'), 'renderer', 'auto', (v) => (renderer = v));
 
 // Control panel side (per-device preference, like the theme)
 bindPref($<HTMLSelectElement>('panel-side'), 'panelSide', 'left', (side) => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.14
+- GPU rendering: the print can be interlaced on the graphics card (WebGL2). Settings → Rendering: Auto (GPU when
+  available, otherwise CPU), GPU or CPU. Output matches the CPU renderer to within one level per channel.
+- 32-bit Windows installer (built with Electron 43, the last Electron release that supports 32-bit Windows).
+
 ## 0.3.13
 - Export panel: format buttons above the render button; the button now says "Render image".
 - Website (`site/`): landing page with downloads, the browser version under `/app/`, screenshots and docs links.

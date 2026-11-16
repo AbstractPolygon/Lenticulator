@@ -32,6 +32,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 
 - **About** (top bar): version, source link, and licenses for the app, the depth model, libraries and samples.
+- **GPU or CPU rendering** (Settings → Rendering): Auto uses the graphics card through WebGL2 when available and falls back to all CPU cores.
 - **Settings menu** (top bar): **Panel location** puts the control panel on the left or right. **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
 
 All processing happens locally. Images never leave your computer.
@@ -62,7 +63,7 @@ npm run electron:dev   # build and open the desktop app
 | Platform | Installer | Build locally |
 |---|---|---|
 | Linux | AppImage and Snap (x64) | `npm run dist:linux` (Snap needs `snapcraft`) |
-| Windows | NSIS setup `.exe` (x64, arm64) with a choice of install folder | `npm run dist:win` |
+| Windows | NSIS setup `.exe` (x64, arm64, and 32-bit built with Electron 43) with a choice of install folder | `npm run dist:win` |
 | macOS | `.dmg` (Intel and Apple silicon) | `npm run dist:mac` |
 
 Installers are written to `release/`. The **Desktop builds** workflow builds all of them on GitHub Actions:

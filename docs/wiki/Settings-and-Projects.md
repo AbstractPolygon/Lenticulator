@@ -11,11 +11,12 @@ From left to right: **Samples**, **Import**, **Open project**, **Save project**,
 | Setting | Options |
 |---|---|
 | **Theme** | System (follows your OS light/dark setting), Light, Dark, High contrast |
+| **Rendering** | Auto (graphics card when available, otherwise the CPU), GPU, or CPU |
 | **Panel location** | Control panel on the left or right |
 | **Photoshop (PSD) files** | Flattened image, or each layer as a frame (bottom layer first) |
 | **Multi-page TIFF files** | Every page as a frame, or first page only |
 
-Theme and panel location are remembered per device.
+Theme, rendering and panel location are remembered per device.
 
 ![Dark theme](images/dark-theme.jpg)
 

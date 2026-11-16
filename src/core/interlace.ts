@@ -102,14 +102,16 @@ export function isOpaque(data: Uint8ClampedArray | Uint8Array): boolean {
 }
 
 /**
- * Integer source rectangle (in frame pixels) that rows [y0, y1) of a
- * `width`-wide output can sample through matrix `m`, plus a margin for
- * bilinear neighbours, clipped to the frame. Lets a band be rendered from a
- * crop of each frame instead of the whole frame.
+ * Integer source rectangle (in frame pixels) that the output region
+ * [rx0, rx1) × [ry0, ry1) can sample through matrix `m`, plus a margin for
+ * bilinear neighbours, clipped to the frame. Lets a band or tile be rendered
+ * from a crop of each frame instead of the whole frame.
  */
-export function bandSourceRect(m: Affine, width: number, y0: number, y1: number, fw: number, fh: number, margin = 2) {
+export function regionSourceRect(
+  m: Affine, rx0: number, ry0: number, rx1: number, ry1: number, fw: number, fh: number, margin = 2,
+) {
   const xs: number[] = [], ys: number[] = [];
-  for (const [x, y] of [[0, y0], [width, y0], [0, y1], [width, y1]]) {
+  for (const [x, y] of [[rx0, ry0], [rx1, ry0], [rx0, ry1], [rx1, ry1]]) {
     xs.push(m[0] * x + m[2] * y + m[4]);
     ys.push(m[1] * x + m[3] * y + m[5]);
   }
@@ -118,6 +120,22 @@ export function bandSourceRect(m: Affine, width: number, y0: number, y1: number,
   const x1 = Math.min(fw, Math.ceil(Math.max(...xs)) + margin);
   const yy1 = Math.min(fh, Math.ceil(Math.max(...ys)) + margin);
   return { x: x0, y: yy0, w: Math.max(0, x1 - x0), h: Math.max(0, yy1 - yy0) };
+}
+
+/** Source rectangle for full-width rows [y0, y1) of a `width`-wide output. */
+export function bandSourceRect(m: Affine, width: number, y0: number, y1: number, fw: number, fh: number, margin = 2) {
+  return regionSourceRect(m, 0, y0, width, y1, fw, fh, margin);
+}
+
+/** Dense per-frame weights for each pixel along the interlace axis: out[f * count + i]. */
+export function denseWeights(lw: LensWeights, count: number, frames: number): Float32Array {
+  const out = new Float32Array(count * frames);
+  for (let i = 0; i < count; i++)
+    for (let e = 0; e < lw.k; e++) {
+      const f = lw.idx[i * lw.k + e];
+      if (f >= 0) out[f * count + i] += lw.weight[i * lw.k + e];
+    }
+  return out;
 }
 
 export interface InterlaceJob {
