@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+- About panel (top bar, left of Settings): version, source repository, app license, and licenses of the depth model, libraries and sample images.
+- Top-bar icon buttons drawn without a button box.
+
 ## 0.3.4
 - License changed to the PolyForm Shield License 1.0.0; third-party notices added.
 

@@ -1477,6 +1477,8 @@ function bindMenu(btnId: string, panelId: string) {
   return setOpen;
 }
 bindMenu('btn-settings', 'settings-panel');
+bindMenu('btn-about', 'about-panel');
+$('about-version').textContent = `v${__APP_VERSION__}`;
 const setSamplesOpen = bindMenu('btn-samples', 'samples-panel');
 
 // Bundled sample sets (public/samples), listed from their manifest

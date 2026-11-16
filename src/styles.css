@@ -75,7 +75,9 @@ body {
   -webkit-app-region: drag;
 }
 .topbar .actions { display: flex; gap: 8px; flex-wrap: wrap; -webkit-app-region: no-drag; }
-.btn.icon { padding: 0; width: 34px; height: 34px; }
+.btn.icon { padding: 0; width: 34px; height: 34px; border-color: transparent; background: transparent; color: var(--text); }
+.btn.icon.primary { color: var(--accent); background: transparent; border-color: transparent; }
+.btn.icon:hover:not(:disabled), .btn.icon[aria-expanded=true] { background: var(--panel-2); filter: none; }
 .menu { position: relative; }
 .menu-panel {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; width: 280px; max-width: calc(100vw - 24px);
@@ -89,6 +91,13 @@ body {
 }
 .menu-item:hover, .menu-item:focus-visible { background: var(--panel-2); }
 .menu-item small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.menu-panel.about { width: 340px; }
+.credits { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
+.credits li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.credits li > span, .credits .end { color: var(--muted); text-align: right; }
+.credits a { color: var(--accent); text-decoration: none; }
+.credits a:hover { text-decoration: underline; }
+.credits .end span { color: var(--accent); }
 .menu-title { font-weight: 650; font-size: 14px; margin-bottom: 8px; }
 .menu-section + .menu-section { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
 .menu-heading { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }

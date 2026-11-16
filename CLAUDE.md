@@ -21,8 +21,9 @@ The page declares the `downloads` capability (saves go through the host's save p
 - Keep labels short. Short warnings (⚠) and status messages are fine; explanations go in the README.
 
 ## Conventions
-- Version lives in `package.json` (shown next to the app name). **Bump it with every change**: patch for
-  fixes/tweaks, minor for new features (`npm version <x.y.z> --no-git-tag-version`), and add a CHANGELOG.md entry.
+- Version lives in `package.json` (shown next to the app name). **Bump it with every change, patch only**:
+  0.3.5 → 0.3.6 … up to 0.3.999. Only bump the minor (second) number when the user explicitly asks.
+  (`npm version <x.y.z> --no-git-tag-version`), and add a CHANGELOG.md entry.
 - `npm test` (vitest) and `npx tsc --noEmit` must pass before committing.
 - Use `npm install --legacy-peer-deps` (also set in `.npmrc`).
 - Core logic in `src/core/` is pure and unit-tested; UI in `src/main.ts` and `src/ui/`.

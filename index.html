@@ -39,6 +39,39 @@
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
         </button>
         <div class="menu">
+          <button id="btn-about" class="btn icon" title="About" aria-label="About" aria-haspopup="dialog" aria-expanded="false" aria-controls="about-panel">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          </button>
+          <div id="about-panel" class="menu-panel about" role="dialog" aria-label="About" hidden>
+            <div class="menu-title">Lenticulator <span id="about-version" class="version"></span></div>
+            <section class="menu-section">
+              <ul class="credits">
+                <li>Source<a class="end" href="https://github.com/AbstractPolygon/Lenticulator" target="_blank" rel="noopener noreferrer"><span>github.com/AbstractPolygon/Lenticulator</span></a></li>
+                <li>License<a class="end" href="https://polyformproject.org/licenses/shield/1.0.0" target="_blank" rel="noopener noreferrer"><span>PolyForm Shield 1.0.0</span></a></li>
+              </ul>
+            </section>
+            <section class="menu-section">
+              <div class="menu-heading">Models &amp; libraries</div>
+              <ul class="credits">
+                <li><a href="https://huggingface.co/depth-anything/Depth-Anything-V2-Small" target="_blank" rel="noopener noreferrer">Depth Anything V2 Small</a><span><a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer">Apache-2.0</a></span></li>
+                <li><a href="https://github.com/microsoft/onnxruntime" target="_blank" rel="noopener noreferrer">ONNX Runtime Web</a><span><a href="https://github.com/microsoft/onnxruntime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></span></li>
+                <li><a href="https://github.com/strukturag/libheif" target="_blank" rel="noopener noreferrer">libheif</a><span><a href="https://www.gnu.org/licenses/lgpl-3.0.html" target="_blank" rel="noopener noreferrer">LGPL-3.0</a></span></li>
+                <li><a href="https://github.com/photopea/UTIF.js" target="_blank" rel="noopener noreferrer">UTIF.js</a><span><a href="https://github.com/photopea/UTIF.js/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></span></li>
+                <li><a href="https://github.com/Agamnentzar/ag-psd" target="_blank" rel="noopener noreferrer">ag-psd</a><span><a href="https://github.com/Agamnentzar/ag-psd/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></span></li>
+                <li><a href="https://github.com/mattdesl/gifenc" target="_blank" rel="noopener noreferrer">gifenc</a><span><a href="https://github.com/mattdesl/gifenc/blob/master/LICENSE.md" target="_blank" rel="noopener noreferrer">MIT</a></span></li>
+                <li><a href="https://www.electronjs.org/" target="_blank" rel="noopener noreferrer">Electron</a><span><a href="https://github.com/electron/electron/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></span></li>
+              </ul>
+            </section>
+            <section class="menu-section">
+              <div class="menu-heading">Sample images</div>
+              <ul class="credits">
+                <li><a href="https://vision.middlebury.edu/stereo/data/scenes2006/" target="_blank" rel="noopener noreferrer">Middlebury stereo datasets</a><span><a href="https://vision.middlebury.edu/stereo/data/" target="_blank" rel="noopener noreferrer">Free with citation</a></span></li>
+                <li><a href="https://www.loc.gov/item/97502309/" target="_blank" rel="noopener noreferrer">Muybridge, The Horse in Motion</a><span><a href="https://www.loc.gov/item/97502309/" target="_blank" rel="noopener noreferrer">No known restrictions</a></span></li>
+              </ul>
+            </section>
+          </div>
+        </div>
+        <div class="menu">
           <button id="btn-settings" class="btn icon" title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-panel">
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
           </button>
