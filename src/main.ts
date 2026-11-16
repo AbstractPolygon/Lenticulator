@@ -1404,7 +1404,7 @@ bindPref($<HTMLSelectElement>('panel-side'), 'panelSide', 'left', (side) => {
 
 bindMenu($('btn-settings'), $('settings-panel'));
 bindMenu($('btn-about'), $('about-panel'));
-$('about-version').textContent = `v${__APP_VERSION__}`;
+$('about-version').textContent = `v${__APP_VERSION__} (beta)`;
 const setSamplesOpen = bindMenu($('btn-samples'), $('samples-panel'));
 
 // Sample sets (public/samples), listed from their manifest. The desktop app doesn't package them:
@@ -1436,7 +1436,7 @@ window.lenticulatorHost?.checkForUpdate().then((u) => {
   if (!u) return;
   try { if (localStorage.getItem(UPDATE_SKIP_KEY) === u.version) return; } catch { /* storage unavailable */ }
   const dlg = $('update-dialog') as HTMLDialogElement;
-  $('update-version').textContent = `v${u.version}`;
+  $('update-version').textContent = `v${u.version} (beta)`;
   ($('update-notes') as HTMLAnchorElement).href = u.notes;
   const dl = $('update-download') as HTMLAnchorElement;
   dl.href = u.url;
@@ -1512,8 +1512,8 @@ async function loadSample(sample: Sample) {
   }
 }
 
-$('app-version').textContent = `v${__APP_VERSION__}`;
-document.title = `Lenticulator ${__APP_VERSION__}`;
+$('app-version').textContent = `v${__APP_VERSION__} (beta)`;
+document.title = `Lenticulator ${__APP_VERSION__} (beta)`;
 
 // Depth from a single photo → generated 3D views (see ui/depthPanel.ts)
 depthPanel = initDepthPanel({
