@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.19
+- The version is shown as "(beta)" in the app (header, About, window title, update popup) and on the website.
+
 ## 0.3.18
 - GIF speed is adjustable: choose GIF in the export formats and set the frames per second (1–50, default 10).
 
