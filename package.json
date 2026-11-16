@@ -1,7 +1,7 @@
 {
   "name": "lenticulator",
   "productName": "Lenticulator",
-  "version": "0.3.19",
+  "version": "0.3.20",
   "description": "Create interlaced images for lenticular prints - in the browser or on the desktop.",
   "license": "SEE LICENSE IN LICENSE",
   "author": "AbstractPolygon",
@@ -38,6 +38,7 @@
   "build": {
     "appId": "com.abstractpolygon.lenticulator",
     "productName": "Lenticulator",
+    "afterPack": "build/mac-adhoc-sign.cjs",
     "directories": {
       "output": "release",
       "buildResources": "build"

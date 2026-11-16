@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.20
+- macOS: the app is ad-hoc signed, so Apple Silicon Macs open it instead of saying it "is damaged". The first time,
+  macOS may still ask: System Settings → Privacy & Security → Open Anyway. The build now checks the signatures and
+  launches both Mac apps (Apple Silicon and Intel) before publishing.
+- Includes 0.3.19 (not released on its own): the version is shown as "(beta)" in the app and on the website.
+
 ## 0.3.19
 - The version is shown as "(beta)" in the app (header, About, window title, update popup) and on the website.
 

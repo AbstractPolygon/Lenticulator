@@ -72,7 +72,9 @@ npm run electron:dev   # build and open the desktop app
 Installers are written to `release/`. The **Desktop builds** workflow builds all of them on GitHub Actions:
 run it from the Actions tab to get the installers as downloadable artifacts, or push a tag such as `v0.3.11`
 to also attach them to a draft release. The builds are unsigned unless you add signing certificates, so
-Windows SmartScreen and macOS Gatekeeper will warn on first launch. A Snap built here is installed with
+Windows SmartScreen and macOS Gatekeeper will warn on first launch. The macOS app gets an ad-hoc signature
+(`build/mac-adhoc-sign.cjs`) so Apple Silicon accepts it, and the workflow checks the signatures and launches both Mac
+apps before publishing. A Snap built here is installed with
 `sudo snap install --dangerous Lenticulator-*.snap` until it's published to the Snap Store.
 
 ### Web version
