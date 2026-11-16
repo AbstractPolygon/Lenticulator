@@ -28,6 +28,10 @@ export interface Settings {
   cropMarks: boolean;
   alignMode: AlignMode;
   exportFormat: 'png' | 'tiff';
+  /** import each Photoshop layer as a frame */
+  psdLayers: boolean;
+  /** import every page of a multi-page TIFF */
+  tiffAllPages: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -51,6 +55,8 @@ export const DEFAULT_SETTINGS: Settings = {
   cropMarks: true,
   alignMode: 'keypoint',
   exportFormat: 'png',
+  psdLayers: false,
+  tiffAllPages: true,
 };
 
 export interface Frame {

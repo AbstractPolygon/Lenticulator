@@ -69,5 +69,10 @@
         "releaseType": "draft"
       }
     ]
+  },
+  "dependencies": {
+    "ag-psd": "^34.1.0",
+    "libheif-js": "^1.23.5",
+    "utif2": "^4.1.0"
   }
 }

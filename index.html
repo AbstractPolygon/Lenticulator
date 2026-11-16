@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; script-src 'self'; frame-src 'self' blob:; connect-src 'self' blob: data:"
+      content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'; frame-src 'self' blob:; connect-src 'self' blob: data:"
     />
     <title>Lenticulator</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
@@ -18,19 +18,20 @@
         <span id="app-version" class="version" title="Version"></span>
       </div>
       <div class="actions">
-        <label class="btn primary" title="Import images (JPEG, PNG, WebP, MPO…)">
-          <input id="file-input" type="file" accept="image/*,.mpo,.jps" multiple hidden />
-          Import images
-        </label>
-        <button id="btn-save-project" class="btn">Save project</button>
-        <label class="btn">
-          <input id="project-input" type="file" accept=".json,.lenti,application/json" hidden />
-          Open project
-        </label>
+        <input id="file-input" type="file" accept="image/*,.mpo,.jps,.heic,.heif,.tif,.tiff,.psd,.psb" multiple hidden />
+        <input id="project-input" type="file" accept=".json,.lenti,application/json" hidden />
+        <button id="btn-import" class="btn icon primary" title="Import images or folders" aria-label="Import images">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/><path d="M16 5h6M19 2v6"/></svg>
+        </button>
+        <button id="btn-open-project" class="btn icon" title="Open project" aria-label="Open project">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6A2 2 0 0 1 18.4 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+        <button id="btn-save-project" class="btn icon" title="Save project" aria-label="Save project">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+        </button>
         <div class="menu">
-          <button id="btn-settings" class="btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-panel">
-            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-            Settings
+          <button id="btn-settings" class="btn icon" title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-panel">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
           </button>
           <div id="settings-panel" class="menu-panel" role="dialog" aria-label="Settings" hidden>
             <div class="menu-title">Settings</div>
@@ -42,6 +43,21 @@
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                   <option value="contrast">High contrast</option>
+                </select>
+              </label>
+            </section>
+            <section class="menu-section">
+              <div class="menu-heading">Import</div>
+              <label>Photoshop (PSD) files
+                <select id="psd-import">
+                  <option value="flat">Flattened image</option>
+                  <option value="layers">Each layer as a frame</option>
+                </select>
+              </label>
+              <label>Multi-page TIFF files
+                <select id="tiff-import">
+                  <option value="all">Every page as a frame</option>
+                  <option value="first">First page only</option>
                 </select>
               </label>
             </section>
@@ -102,7 +118,7 @@
         <details open class="panel">
           <summary>Frames <span id="frame-count" class="badge">0</span></summary>
           <div id="dropzone" class="dropzone">
-            Drop images or folders anywhere, or use <b>Import images</b>.<br />
+            Drop images or folders anywhere, or click the import button.<br />
             <small>Drag to reorder · ★ = alignment reference</small>
           </div>
           <ol id="frame-list" class="frame-list"></ol>

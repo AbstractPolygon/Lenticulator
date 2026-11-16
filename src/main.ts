@@ -11,6 +11,7 @@ import {
 } from './ui/state';
 import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
 import { WorkerClient } from './ui/workerClient';
+import { RawImage, decodeSpecial, sniffBlob } from './ui/decoders';
 import { Rect, ViewState } from './ui/view';
 import type { FrameRef, WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toPng, toTiff } from './ui/export';
@@ -100,6 +101,8 @@ function syncForm() {
   $<HTMLInputElement>('cropMarks').checked = s.cropMarks;
   $<HTMLSelectElement>('align-mode').value = s.alignMode;
   $<HTMLSelectElement>('export-format').value = s.exportFormat;
+  $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
+  $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
   const pi = SIZE_PRESETS.findIndex(
     (p) => (Math.abs(p.w - s.widthIn) < 1e-3 && Math.abs(p.h - s.heightIn) < 1e-3) ||
       (Math.abs(p.h - s.widthIn) < 1e-3 && Math.abs(p.w - s.heightIn) < 1e-3),
@@ -169,6 +172,8 @@ function bindSettings() {
   on('cropMarks', 'change', (el) => (S().cropMarks = el.checked));
   on('align-mode', 'change', (el) => (S().alignMode = el.value as Settings['alignMode']));
   on('export-format', 'change', (el) => (S().exportFormat = el.value as Settings['exportFormat']));
+  on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
+  on('tiff-import', 'change', (el) => (S().tiffAllPages = el.value === 'all'));
 }
 
 function activeFrames(): Frame[] {
@@ -224,6 +229,31 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
     const file = list[i];
     const baseName = names?.[i] ?? (file as File).name ?? `Frame ${state.frames.length + 1}`;
     try {
+      const kind = await sniffBlob(file, baseName);
+      if (kind) {
+        // HEIC opens natively in Safari; otherwise (and for TIFF/PSD) use the bundled decoders
+        const native = kind === 'heic' ? await decode(file).catch(() => null) : null;
+        if (native) {
+          await addFrame(file, baseName, NO_TRANSFORM, true, native);
+          added++;
+          continue;
+        }
+        status(`Decoding ${baseName}…`, 'info', 20000);
+        const raws = await decodeSpecial(file, kind, { psdLayers: S().psdLayers, tiffAllPages: S().tiffAllPages });
+        if (raws.length === 1) {
+          // keep the original file (smaller project files); it is decoded again on load
+          await addFrame(file, baseName, NO_TRANSFORM, true, await rawToBitmap(raws[0]));
+          added++;
+        } else {
+          // pages / layers become separate lossless PNG frames
+          for (let p = 0; p < raws.length; p++) {
+            const bmp = await rawToBitmap(raws[p]);
+            await addFrame(await bitmapToPng(bmp), `${baseName} [${raws[p].name ?? p + 1}]`, NO_TRANSFORM, true, bmp);
+            added++;
+          }
+        }
+        continue;
+      }
       const parts = await splitMultiPicture(file);
       for (let p = 0; p < parts.length; p++) {
         const blob = parts.length > 1 ? parts[p] : file;
@@ -231,7 +261,10 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
         added++;
       }
     } catch (e) {
-      status(`Could not open ${baseName}: this image format isn’t supported here (try JPEG, PNG or WebP).`, "error", 6000);
+      const why = e instanceof Error && e.message && !/decode|source image|InvalidStateError/i.test(e.message)
+        ? e.message
+        : 'this image format isn’t supported here';
+      status(`Could not open ${baseName}: ${why}.`, 'error', 7000);
     }
   }
   if (added) status(`Added ${added} frame(s).`);
@@ -240,8 +273,36 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
   scheduleRedraw();
 }
 
-async function addFrame(blob: Blob, name: string, transform: FrameTransform = NO_TRANSFORM, enabled = true): Promise<Frame> {
-  const bitmap = await decode(blob);
+async function rawToBitmap(r: RawImage): Promise<ImageBitmap> {
+  return createImageBitmap(new ImageData(r.data as Uint8ClampedArray<ArrayBuffer>, r.width, r.height));
+}
+
+async function bitmapToPng(bmp: ImageBitmap): Promise<Blob> {
+  const c = document.createElement('canvas');
+  c.width = bmp.width;
+  c.height = bmp.height;
+  c.getContext('2d')!.drawImage(bmp, 0, 0);
+  const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('could not convert the image');
+  return blob;
+}
+
+/** Decode any supported file (used for project reloads, where frames keep their original bytes). */
+async function decodeAny(blob: Blob, name: string): Promise<ImageBitmap> {
+  const kind = await sniffBlob(blob, name);
+  if (!kind) return decode(blob);
+  if (kind === 'heic') {
+    const native = await decode(blob).catch(() => null);
+    if (native) return native;
+  }
+  const [first] = await decodeSpecial(blob, kind, { psdLayers: false, tiffAllPages: false });
+  return rawToBitmap(first);
+}
+
+async function addFrame(
+  blob: Blob, name: string, transform: FrameTransform = NO_TRANSFORM, enabled = true, decoded?: ImageBitmap,
+): Promise<Frame> {
+  const bitmap = decoded ?? (await decodeAny(blob, name));
   const frame: Frame = {
     id: uid(),
     name,
@@ -1169,6 +1230,8 @@ function bindChrome() {
     if (input.files?.[0]) openProject(input.files[0]).finally(() => (input.value = ''));
   });
   $('btn-save-project').addEventListener('click', saveProject);
+  $('btn-import').addEventListener('click', () => $<HTMLInputElement>('file-input').click());
+  $('btn-open-project').addEventListener('click', () => $<HTMLInputElement>('project-input').click());
   $('btn-reverse-order').addEventListener('click', () => {
     state.frames.reverse();
     renderFrameList();

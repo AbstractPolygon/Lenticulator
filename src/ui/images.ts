@@ -85,7 +85,7 @@ export function base64ToBlob(b64: string, type: string): Blob {
 }
 
 /** File extensions offered for import (decoding depends on the browser engine). */
-export const IMAGE_EXT = /\.(jpe?g|jfif|png|webp|gif|bmp|avif|ico|svg|mpo|jps|heic|heif|tiff?)$/i;
+export const IMAGE_EXT = /\.(jpe?g|jfif|png|webp|gif|bmp|avif|ico|svg|mpo|jps|heic|heif|tiff?|psd|psb)$/i;
 
 export function isImageFile(f: File): boolean {
   if (f.name.startsWith('.')) return false; // macOS "._" resource forks, hidden files

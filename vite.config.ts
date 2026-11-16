@@ -8,6 +8,7 @@ export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   worker: { format: 'es' },
-  build: { target: 'es2022', outDir: 'dist', emptyOutDir: true },
+  // format decoders (HEIC wasm ≈2 MB) are lazy-loaded chunks, so a larger limit is fine
+  build: { target: 'es2022', outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 2500 },
   test: { include: ['tests/**/*.test.ts'] },
 });
