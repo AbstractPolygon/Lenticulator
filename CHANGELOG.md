@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.11
+- Desktop builds workflow: Linux AppImage and Snap, Windows NSIS installer (x64, arm64), macOS DMG
+  (Intel, Apple silicon); manual runs upload installers as artifacts, version tags attach them to a draft release.
+- Smaller desktop app (154 MB instead of 201 MB): libraries already bundled by the build are no longer copied in again.
+
 ## 0.3.10
 - Faster rendering: the print is interlaced in parallel bands across all CPU cores, each band receiving
   only the part of every frame it needs; opaque frames skip transparency maths (about 2× faster end to end

@@ -57,13 +57,17 @@ npm run electron:dev   # build and open the desktop app
 
 ### Desktop installers
 
-```bash
-npm run dist:win     # NSIS installer + portable .exe
-npm run dist:mac     # .dmg + .zip
-npm run dist:linux   # AppImage + .deb
-```
+| Platform | Installer | Build locally |
+|---|---|---|
+| Linux | AppImage and Snap (x64) | `npm run dist:linux` (Snap needs `snapcraft`) |
+| Windows | NSIS setup `.exe` (x64, arm64) with a choice of install folder | `npm run dist:win` |
+| macOS | `.dmg` (Intel and Apple silicon) | `npm run dist:mac` |
 
-Installers are written to `release/`. Push a tag such as `v0.1.0` and the **Release desktop apps** workflow builds all three platforms on GitHub Actions and attaches them to a draft release. macOS builds are unsigned unless you add signing certificates.
+Installers are written to `release/`. The **Desktop builds** workflow builds all of them on GitHub Actions:
+run it from the Actions tab to get the installers as downloadable artifacts, or push a tag such as `v0.3.11`
+to also attach them to a draft release. The builds are unsigned unless you add signing certificates, so
+Windows SmartScreen and macOS Gatekeeper will warn on first launch. A Snap built here is installed with
+`sudo snap install --dangerous Lenticulator-*.snap` until it's published to the Snap Store.
 
 ### Web version
 

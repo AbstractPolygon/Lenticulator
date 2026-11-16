@@ -1,0 +1,75 @@
+name: Desktop builds
+# Builds installers for Linux (AppImage, Snap), Windows (NSIS installer) and macOS (DMG).
+# - Manual run (Actions → Desktop builds → Run workflow): installers are attached to the run as artifacts.
+# - Tag push (v*): installers are also attached to a draft GitHub release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Install snapcraft
+        run: |
+          sudo snap install snapcraft --classic
+          sudo snap install core22
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Build AppImage and Snap
+        run: npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lenticulator-linux
+          path: |
+            release/*.AppImage
+            release/*.snap
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Build NSIS installer
+        run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lenticulator-windows
+          path: release/*.exe
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Build DMG (Intel and Apple silicon)
+        run: npx electron-builder --mac --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # unsigned unless signing certificates are added as secrets (CSC_LINK / CSC_KEY_PASSWORD)
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lenticulator-macos
+          path: release/*.dmg
+          if-no-files-found: error
