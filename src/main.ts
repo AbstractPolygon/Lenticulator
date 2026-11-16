@@ -12,7 +12,7 @@ import {
 import { base64ToBlob, blobToBase64, decode, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
 import { WorkerClient } from './ui/workerClient';
 import type { FrameRef, WorkerResponse } from './worker';
-import { RenderResult, download, printResult, toPng, toTiff } from './ui/export';
+import { RenderResult, download, inArtifactHost, printResult, toPng, toTiff } from './ui/export';
 
 // ---------------------------------------------------------------------------
 // State
@@ -895,7 +895,7 @@ async function exportResult() {
     status('Encoding…', 'info', 30000);
     const fmt = S().exportFormat;
     const blob = fmt === 'tiff' ? toTiff(result) : await toPng(result);
-    download(blob, `${result.fileBase}.${fmt === 'tiff' ? 'tif' : 'png'}`);
+    await download(blob, `${result.fileBase}.${fmt === 'tiff' ? 'tif' : 'png'}`);
     status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${fmt.toUpperCase()} at ${result.dpi} DPI.`);
   } catch (e) {
     status(`Export failed: ${(e as Error).message}`, 'error', 8000);
@@ -931,8 +931,12 @@ async function saveProject() {
       })),
     ),
   };
-  download(new Blob([JSON.stringify(proj)], { type: 'application/json' }), 'project.lenti.json');
-  status('Project saved.');
+  try {
+    await download(new Blob([JSON.stringify(proj)], { type: 'application/json' }), 'project.lenti.json');
+    status('Project saved.');
+  } catch (e) {
+    status(`Could not save project: ${(e as Error).message}`, 'error', 6000);
+  }
 }
 
 async function openProject(file: File) {
@@ -985,8 +989,19 @@ function bindChrome() {
     renderFrameList();
     scheduleRedraw();
   });
+  // two-step confirm inside the page (dialogs are unavailable in some hosts)
+  let clearArmed = 0;
   $('btn-clear').addEventListener('click', () => {
-    if (!state.frames.length || !confirm('Remove all frames?')) return;
+    const btn = $('btn-clear');
+    if (!state.frames.length) return;
+    if (!clearArmed) {
+      btn.textContent = 'Click again to remove all';
+      clearArmed = window.setTimeout(() => { clearArmed = 0; btn.textContent = 'Remove all'; }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed);
+    clearArmed = 0;
+    btn.textContent = 'Remove all';
     for (const f of [...state.frames]) removeFrame(f.id);
     state.keyPoint = null;
     renderFrameList();
@@ -1054,14 +1069,22 @@ function applyTheme(t: string) {
   document.documentElement.dataset.theme = t;
   $<HTMLSelectElement>('theme').value = t;
 }
-let savedTheme = 'system';
-try { savedTheme = localStorage.getItem(THEME_KEY) || 'system'; } catch { /* storage unavailable */ }
+// default to a theme the host page already set (e.g. an embedding viewer), else follow the OS
+let savedTheme = document.documentElement.dataset.theme || 'system';
+try { savedTheme = localStorage.getItem(THEME_KEY) || savedTheme; } catch { /* storage unavailable */ }
 applyTheme(savedTheme);
 $('theme').addEventListener('change', (e) => {
   const t = (e.target as HTMLSelectElement).value;
   applyTheme(t);
   try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
 });
+
+if (inArtifactHost()) {
+  // the sandboxed viewer can't open print dialogs or save TIFF files
+  $('btn-print').hidden = true;
+  $('export-format').querySelector('option[value=tiff]')?.remove();
+  if (S().exportFormat === 'tiff') S().exportFormat = 'png';
+}
 
 fillStaticOptions();
 bindSettings();

@@ -10,7 +10,33 @@ export interface RenderResult {
   fileBase: string;
 }
 
-export function download(blob: Blob, name: string): void {
+type HostDownloads = { save(r: { filename: string; data: Blob }): Promise<unknown> };
+type HostBridge = { use(name: string): Promise<unknown> };
+
+/** True when running inside a claude.ai artifact viewer (sandboxed frame). */
+export function inArtifactHost(): boolean {
+  return typeof (window as unknown as { claude?: HostBridge }).claude?.use === 'function';
+}
+
+/**
+ * Save a file. Inside a claude.ai artifact the sandbox blocks plain downloads,
+ * so the host's "downloads" capability is used (the viewer confirms the save).
+ */
+export async function download(blob: Blob, name: string): Promise<void> {
+  const host = (window as unknown as { claude?: HostBridge }).claude;
+  if (host?.use) {
+    const d = (await host.use('downloads')) as HostDownloads | null;
+    if (!d) throw new Error('Saving files is not available in this view.');
+    try {
+      await d.save({ filename: name, data: blob });
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === 'declined') return;
+      if (code === 'rejected_extension') throw new Error(`.${name.split('.').pop()} files can't be saved here – use PNG, or the desktop app.`);
+      throw new Error((e as { message?: string }).message ?? 'Save failed');
+    }
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
