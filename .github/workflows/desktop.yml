@@ -1,11 +1,21 @@
 name: Desktop builds
 # Builds installers for Linux (AppImage, Snap), Windows (NSIS installer) and macOS (DMG).
 # - Manual run (Actions → Desktop builds → Run workflow): installers are attached to the run as artifacts.
-# - Tag push (v*): installers are also attached to a draft GitHub release.
+#   Tick "publish" to also publish them as the public GitHub release v<package.json version>
+#   (the release and its tag are created on GitHub for the commit that was built).
+# - Tag push (v*): installers are published to that release.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the installers as the public release v<version>
+        type: boolean
+        default: false
   push:
     tags: ['v*']
+
+env:
+  PUBLISH: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.publish) && 'always' || 'never' }}
 
 permissions:
   contents: write
@@ -25,7 +35,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Build AppImage and Snap
-        run: npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        run: npx electron-builder --linux --publish ${{ env.PUBLISH }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
@@ -45,7 +55,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Build NSIS installer
-        run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        run: npx electron-builder --win --publish ${{ env.PUBLISH }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
@@ -63,7 +73,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Build DMG (Intel and Apple silicon)
-        run: npx electron-builder --mac --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        run: npx electron-builder --mac --publish ${{ env.PUBLISH }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # unsigned unless signing certificates are added as secrets (CSC_LINK / CSC_KEY_PASSWORD)
