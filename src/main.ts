@@ -116,6 +116,8 @@ function syncForm() {
   $<HTMLSelectElement>('align-mode').value = s.alignMode;
   document.querySelectorAll<HTMLButtonElement>('#export-format [data-format]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
+  num('gif-fps', s.gifFps, 1);
+  $('gif-speed').hidden = s.exportFormat !== 'gif';
   $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
   if (s.depthAuto) s.depthFrames = framesForLens(s.lpi, s.dpi);
   num('d-frames', s.depthFrames, 0);
@@ -208,6 +210,7 @@ function bindSettings() {
     syncForm();
     updateExportButtons();
   });
+  on('gif-fps', 'change', (el) => (S().gifFps = Math.max(1, Math.min(50, Math.round(+el.value) || 10))));
   on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
   on('d-frames', 'change', (el) => (S().depthFrames = Math.max(2, Math.min(48, Math.round(+el.value) || 2))));
   on('d-auto', 'change', (el) => (S().depthAuto = el.checked));
@@ -1161,7 +1164,7 @@ async function exportAnimation(kind: 'gif' | 'video') {
   const { w, h } = social?.px ? animSize(social.w / social.h, Math.max(social.w, social.h))
     : animSize(s.widthIn / s.heightIn, kind === 'gif' ? 800 : 1280);
   const positions = kind === 'gif' ? gifPositions(frames.length, s.mode) : sweepPositions(frames.length, 4);
-  const fps = kind === 'gif' ? 10 : 25;
+  const fps = kind === 'gif' ? s.gifFps : 25;
   const base = kind === 'gif' ? `animation_${frames.length}f` : `lenticular_preview_${frames.length}f`;
   setBusy(true);
   progress(0);

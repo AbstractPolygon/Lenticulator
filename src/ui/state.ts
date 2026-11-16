@@ -29,6 +29,8 @@ export interface Settings {
   alignMode: AlignMode;
   /** png/jpg/tiff export the rendered print; gif/video export an animated tilt preview */
   exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
+  /** GIF playback speed, frames per second */
+  gifFps: number;
   /** import each Photoshop layer as a frame */
   psdLayers: boolean;
   /** depth → 3D views */
@@ -65,6 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cropMarks: true,
   alignMode: 'keypoint',
   exportFormat: 'png',
+  gifFps: 10,
   psdLayers: false,
   depthFrames: 10,
   depthAuto: true,

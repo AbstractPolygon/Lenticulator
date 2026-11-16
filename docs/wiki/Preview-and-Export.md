@@ -39,7 +39,7 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 | **PNG** | Rendered print, lossless, tagged with the print DPI. |
 | **JPG** | Rendered print, tagged with the print DPI. |
 | **TIF** | Rendered print, uncompressed, tagged with the print DPI. |
-| **GIF** | Animated GIF of the aligned frames, one GIF frame per frame, 10 per second (no render needed). Animations loop forward; 3D views rock back and forth. |
+| **GIF** | Animated GIF of the aligned frames, one GIF frame per frame (no render needed). Set the speed in frames per second (1–50, default 10) next to the format buttons. Animations loop forward; 3D views rock back and forth. |
 | **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). |
 
 **Print…** prints at the exact physical size. Turn off printer scaling and borderless expansion.

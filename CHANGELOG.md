@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.18
+- GIF speed is adjustable: choose GIF in the export formats and set the frames per second (1–50, default 10).
+
 ## 0.3.17
 - GIF export is a real frame animation: one GIF frame per aligned frame at 10 per second, with no lenticular
   blending. Animations loop forward; 3D views rock back and forth. (Video still records the tilt preview.)
