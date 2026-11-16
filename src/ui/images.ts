@@ -87,7 +87,8 @@ export const IMAGE_EXT = /\.(jpe?g|jfif|png|webp|gif|bmp|avif|ico|svg|mpo|jps|he
 
 export function isImageFile(f: File): boolean {
   if (f.name.startsWith('.')) return false; // macOS "._" resource forks, hidden files
-  return f.type.startsWith('image/') || IMAGE_EXT.test(f.name);
+  // videos too: their frames are imported (see ui/video.ts)
+  return f.type.startsWith('image/') || f.type.startsWith('video/') || IMAGE_EXT.test(f.name) || /\.(mp4|m4v|mov|webm|ogv)$/i.test(f.name);
 }
 
 /**

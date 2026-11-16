@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'; frame-src 'self' blob:; connect-src 'self' blob: data:"
+      content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval'; frame-src 'self' blob:; connect-src 'self' blob: data:; media-src 'self' blob:"
     />
     <title>Lenticulator</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
@@ -18,7 +18,7 @@
         <span id="app-version" class="version" title="Version"></span>
       </div>
       <div class="actions">
-        <input id="file-input" type="file" accept="image/*,.mpo,.jps,.heic,.heif,.tif,.tiff,.psd,.psb" multiple hidden />
+        <input id="file-input" type="file" accept="image/*,video/*,.mpo,.jps,.heic,.heif,.tif,.tiff,.psd,.psb,.mov,.mp4,.m4v,.webm" multiple hidden />
         <input id="project-input" type="file" accept=".json,.lenti,application/json" hidden />
         <div class="menu">
           <button id="btn-samples" class="btn icon" title="Samples" aria-label="Samples" aria-haspopup="menu" aria-expanded="false" aria-controls="samples-panel">
@@ -110,6 +110,9 @@
                   <option value="flat">Flattened image</option>
                   <option value="layers">Each layer as a frame</option>
                 </select>
+              </label>
+              <label>Video frames
+                <input id="video-frames" title="How many evenly spaced frames to take from an imported video, such as the MOV of an iPhone Live Photo (2–48)" type="number" min="2" max="48" step="1" />
               </label>
               <label>Multi-page TIFF files
                 <select id="tiff-import" title="Import every page of a multi-page TIFF as frames, or only the first page">

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.37
+- Video import: importing a video (MP4, MOV, M4V, WebM), such as the MOV of an iPhone Live Photo, takes evenly
+  spaced frames (Settings → Import → Video frames, default 10).
+- Fix: a rendered video now plays in the Output tab (the page's security policy blocked video).
+
 ## 0.3.36
 - Print-shop export: **PDF** with the page exactly the print size, and TIF in **CMYK** (or RGB).
 

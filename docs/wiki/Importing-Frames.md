@@ -30,6 +30,10 @@ Import options are under **Settings → Import**: see [Settings and Projects](Se
 - **✕** removes the frame. **Remove all** clears the list (click twice).
 - After auto-alignment each frame shows a **match** percentage.
 
+## Videos and Live Photos
+
+Import a video (MP4, MOV, M4V or WebM) like any image: Lenticulator takes evenly spaced frames from it, 10 by default (**Settings → Import → Video frames**, 2–48). For an iPhone **Live Photo**, import its MOV file. iPhone videos are often HEVC, which some browsers and Windows can't decode; if a MOV won't open, export it from Photos as a video (H.264 MP4).
+
 ## Film-camera scans
 
 Multi-lens film cameras (Nimslo, Nishika N8000, Reto3D …) put 3 or 4 small frames side by side on the film. Import the scan, select it, and choose **Split scan → 2, 3 or 4 frames** in the Frames panel: Lenticulator finds the gaps between the frames, trims the film border and replaces the scan with equal-size frames, ready to align.

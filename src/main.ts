@@ -18,6 +18,7 @@ import { zipStore } from './core/fileformats';
 import { scanProfiles, splitScan } from './core/split';
 import { frameSequence } from './core/timing';
 import { estimateFlow, interpolate } from './core/flow';
+import { isVideo, videoFrames } from './ui/video';
 import { framesForLens, maxDepthPercent } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
@@ -156,6 +157,7 @@ function syncForm() {
   $<HTMLInputElement>('d-invert').checked = s.depthInvert;
   $('depth-panel').hidden = s.mode !== '3d';
   $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
+  num('video-frames', s.videoFrames, 0);
   const pi = matchPreset(s);
   // printer / lens presets show the one matching the typed values (a printer keeps its pick when DPIs are shared)
   const pp = $<HTMLSelectElement>('printer-preset');
@@ -262,6 +264,7 @@ function bindSettings() {
   on('d-amount', 'input', (el) => (S().depthAmount = +el.value));
   on('d-focus', 'input', (el) => { S().depthFocus = +el.value; depthPanel?.drawThumb(); });
   on('d-invert', 'change', (el) => { S().depthInvert = el.checked; depthPanel?.drawThumb(); });
+  on('video-frames', 'change', (el) => (S().videoFrames = Math.max(2, Math.min(48, Math.round(+el.value) || 10))));
   on('tiff-import', 'change', (el) => (S().tiffAllPages = el.value === 'all'));
 }
 
@@ -336,6 +339,16 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
     const file = list[i];
     const baseName = names?.[i] ?? (file as File).name ?? `Frame ${state.frames.length + 1}`;
     try {
+      if (isVideo(file, baseName)) {
+        // a video (or Live Photo MOV): evenly spaced stills become frames
+        const stills = await videoFrames(file, S().videoFrames, (d, n) => status(`Reading ${baseName}… ${d}/${n}`, 'info', 20000));
+        const stem = baseName.replace(/\.\w+$/, '');
+        for (let k = 0; k < stills.length; k++) {
+          await addFrame(await encodeBitmap(stills[k], 'image/jpeg', 0.92), `${stem} ${k + 1}`, NO_TRANSFORM, true, stills[k]);
+          added++;
+        }
+        continue;
+      }
       const kind = await sniffBlob(file, baseName);
       if (kind) {
         // HEIC opens natively in Safari; otherwise (and for TIFF/PSD) use the bundled decoders

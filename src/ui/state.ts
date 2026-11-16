@@ -60,6 +60,8 @@ export interface Settings {
   depthInvert: boolean;
   /** import every page of a multi-page TIFF */
   tiffAllPages: boolean;
+  /** frames taken from an imported video (or Live Photo) */
+  videoFrames: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -99,6 +101,7 @@ export const DEFAULT_SETTINGS: Settings = {
   depthFocus: 0.5,
   depthInvert: false,
   tiffAllPages: true,
+  videoFrames: 10,
 };
 
 export interface Frame {
