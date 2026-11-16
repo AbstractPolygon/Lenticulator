@@ -34,5 +34,9 @@ Import options are under **Settings → Import**: see [Settings and Projects](Se
 
 | Set | Effect | Source |
 |---|---|---|
-| Aloe, Baby, Bowling, Flowerpots | 3D, 7 views each | [Middlebury 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/scenes2006/) |
-| Horse in Motion | Animation, 11 frames | Eadweard Muybridge (1878), [Library of Congress](https://www.loc.gov/item/97502309/) |
+| Aloe, Art, Baby, Bowling, Dolls, Flowerpots, Moebius, Reindeer | 3D, 7 views each | [Middlebury 2005 and 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/) |
+| Earth | Animation, 10 frames | NASA [EPIC](https://epic.gsfc.nasa.gov/) camera on DSCOVR |
+| Elephant, Cat, Elk, Camel, Raccoon | Animation, 6–10 frames | Eadweard Muybridge, *Animal Locomotion* (1887), [Wellcome Collection](https://wellcomecollection.org/) |
+| Horse | Animation, 11 frames | Eadweard Muybridge (1878), [Library of Congress](https://www.loc.gov/item/97502309/) |
+
+In the desktop app the samples are an optional download: tick **Settings → Samples → Sample images**. The Samples button appears once they're installed.

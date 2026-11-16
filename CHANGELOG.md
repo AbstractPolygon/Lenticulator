@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.15
+- New samples: the 3D sets are now full-size Middlebury views (4× the pixels), with four more scenes (Art, Dolls,
+  Moebius, Reindeer). New animations: Earth from NASA's EPIC camera, and Muybridge's elephant, cat, elk, camel
+  and raccoon from the Wellcome Collection's public-domain plates.
+- Desktop: sample images are no longer packaged. Settings → Samples → Sample images downloads them; the Samples
+  button appears once they're installed. Untick to delete them.
+
 ## 0.3.14
 - GPU rendering: the print can be interlaced on the graphics card (WebGL2). Settings → Rendering: Auto (GPU when
   available, otherwise CPU), GPU or CPU. Output matches the CPU renderer to within one level per channel.

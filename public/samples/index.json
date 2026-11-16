@@ -15,6 +15,20 @@
       ]
     },
     {
+      "id": "art",
+      "name": "Art",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
       "id": "baby1",
       "name": "Baby",
       "mode": "3d",
@@ -43,6 +57,20 @@
       ]
     },
     {
+      "id": "dolls",
+      "name": "Dolls",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
       "id": "flowerpots",
       "name": "Flowerpots",
       "mode": "3d",
@@ -57,8 +85,130 @@
       ]
     },
     {
+      "id": "moebius",
+      "name": "Moebius",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "reindeer",
+      "name": "Reindeer",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "earth",
+      "name": "Earth",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg",
+        "frame07.jpg",
+        "frame08.jpg",
+        "frame09.jpg",
+        "frame10.jpg"
+      ]
+    },
+    {
+      "id": "elephant",
+      "name": "Elephant",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg"
+      ]
+    },
+    {
+      "id": "cat",
+      "name": "Cat",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg",
+        "frame07.jpg",
+        "frame08.jpg",
+        "frame09.jpg",
+        "frame10.jpg"
+      ]
+    },
+    {
+      "id": "elk",
+      "name": "Elk",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg",
+        "frame07.jpg",
+        "frame08.jpg",
+        "frame09.jpg",
+        "frame10.jpg"
+      ]
+    },
+    {
+      "id": "camel",
+      "name": "Camel",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg",
+        "frame07.jpg",
+        "frame08.jpg",
+        "frame09.jpg",
+        "frame10.jpg"
+      ]
+    },
+    {
+      "id": "raccoon",
+      "name": "Raccoon",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg"
+      ]
+    },
+    {
       "id": "horse",
-      "name": "Horse in Motion",
+      "name": "Horse",
       "mode": "animation",
       "files": [
         "frame01.jpg",

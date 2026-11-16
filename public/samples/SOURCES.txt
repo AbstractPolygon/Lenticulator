@@ -1,9 +1,24 @@
 Sample images bundled with Lenticulator
 
-aloe, baby1, bowling2, flowerpots (3D, 7 views each, half size, re-encoded as JPEG)
-  Middlebury 2006 stereo datasets - https://vision.middlebury.edu/stereo/data/scenes2006/
+aloe, art, baby1, bowling2, dolls, flowerpots, moebius, reindeer (3D, 7 views each, full size, re-encoded as JPEG)
+  Middlebury 2005 and 2006 stereo datasets:
+    https://vision.middlebury.edu/stereo/data/scenes2005/
+    https://vision.middlebury.edu/stereo/data/scenes2006/
   D. Scharstein and C. Pal. Learning conditional random fields for stereo. CVPR 2007.
   H. Hirschmüller and D. Scharstein. Evaluation of cost functions for stereo matching. CVPR 2007.
+
+earth (animation, 10 frames)
+  NASA EPIC camera on NOAA's DSCOVR spacecraft, 20 June 2026. Public domain (NASA imagery).
+  https://epic.gsfc.nasa.gov/
+
+elephant, cat, elk, camel, raccoon (animation)
+  Eadweard Muybridge, Animal Locomotion (1887), collotype plates from the Wellcome Collection.
+  Public Domain Mark. Frames cut from the plates.
+  Elephant walking  https://wellcomecollection.org/works/xzvh9v8j
+  Cat running       https://wellcomecollection.org/works/ku7faefm
+  Elk running       https://wellcomecollection.org/works/atcx7j8v
+  Camel running     https://wellcomecollection.org/works/wpgfskd7
+  Raccoon running   https://wellcomecollection.org/works/hq6han7u
 
 horse (animation, 11 frames)
   Eadweard Muybridge, "The Horse in Motion" (1878). Library of Congress, no known restrictions on publication.

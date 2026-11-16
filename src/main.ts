@@ -1386,26 +1386,63 @@ bindMenu($('btn-about'), $('about-panel'));
 $('about-version').textContent = `v${__APP_VERSION__}`;
 const setSamplesOpen = bindMenu($('btn-samples'), $('samples-panel'));
 
-// Bundled sample sets (public/samples), listed from their manifest
+// Sample sets (public/samples), listed from their manifest. The desktop app doesn't package them:
+// they're an optional download (Settings → Samples), and the Samples button shows once they're installed.
 interface Sample { id: string; name: string; mode: Settings['mode']; files: string[] }
 let samples: Sample[] = [];
-fetch('samples/index.json')
-  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-  .then((m: { samples: Sample[] }) => {
-    samples = m.samples;
-    const list = $('samples-list');
-    const groups: [Settings['mode'], string][] = [['3d', '3D'], ['animation', 'Animation']];
-    list.innerHTML = groups.map(([mode, label]) => `
-      <section class="menu-section">
-        <div class="menu-heading">${label}</div>
-        ${samples.filter((x) => x.mode === mode).map((x) =>
-          `<button class="menu-item" role="menuitem" data-sample="${x.id}">${escapeHtml(x.name)}<small>${x.files.length}</small></button>`).join('')}
-      </section>`).join('');
-  })
-  .catch((e) => {
-    $('samples-list').innerHTML = '<div class="menu-heading">⚠ Samples unavailable</div>';
-    status(`Could not load the sample list: ${(e as Error).message}`, 'error', 6000);
+function loadSampleList() {
+  return fetch('samples/index.json')
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((m: { samples: Sample[] }) => {
+      samples = m.samples;
+      const groups: [Settings['mode'], string][] = [['3d', '3D'], ['animation', 'Animation']];
+      $('samples-list').innerHTML = groups.map(([mode, label]) => `
+        <section class="menu-section">
+          <div class="menu-heading">${label}</div>
+          ${samples.filter((x) => x.mode === mode).map((x) =>
+            `<button class="menu-item" role="menuitem" data-sample="${x.id}">${escapeHtml(x.name)}<small>${x.files.length}</small></button>`).join('')}
+        </section>`).join('');
+    })
+    .catch((e) => {
+      $('samples-list').innerHTML = '<div class="menu-heading">⚠ Samples unavailable</div>';
+      status(`Could not load the sample list: ${(e as Error).message}`, 'error', 6000);
+    });
+}
+
+const desktopSamples = window.lenticulatorHost?.samples;
+if (!desktopSamples) loadSampleList();
+else {
+  const box = $('samples-download') as HTMLInputElement;
+  const showSamples = (on: boolean) => {
+    box.checked = on;
+    $('btn-samples').hidden = !on;
+    if (on) loadSampleList();
+    else setSamplesOpen(false);
+  };
+  $('samples-settings').hidden = false;
+  $('btn-samples').hidden = true;
+  desktopSamples.installed().then(showSamples, () => showSamples(false));
+  box.addEventListener('change', async () => {
+    box.disabled = true;
+    try {
+      if (box.checked) {
+        status('Downloading samples…', 'info', 600000);
+        await desktopSamples.download((done, total) => status(`Downloading samples… ${done}/${total}`, 'info', 600000));
+        showSamples(true);
+        status('Samples downloaded.', 'info', 3000);
+      } else {
+        await desktopSamples.remove();
+        showSamples(false);
+        status('Samples removed.', 'info', 3000);
+      }
+    } catch (e) {
+      showSamples(!box.checked);
+      status(`Samples: ${(e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')}`, 'error', 8000);
+    } finally {
+      box.disabled = false;
+    }
   });
+}
 
 $('samples-list').addEventListener('click', (e) => {
   const id = (e.target as HTMLElement).closest<HTMLElement>('[data-sample]')?.dataset.sample;

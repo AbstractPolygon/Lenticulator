@@ -20,7 +20,9 @@ Lenticulator is licensed under the **[PolyForm Shield License 1.0.0](https://pol
 
 | Images | Source | Terms |
 |---|---|---|
-| Aloe, Baby, Bowling, Flowerpots | [Middlebury 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/scenes2006/) | Free to use with citation: D. Scharstein and C. Pal, *Learning conditional random fields for stereo*, CVPR 2007; H. Hirschmüller and D. Scharstein, *Evaluation of cost functions for stereo matching*, CVPR 2007 |
-| Horse in Motion | Eadweard Muybridge (1878), [Library of Congress](https://www.loc.gov/item/97502309/) | No known restrictions on publication |
+| Aloe, Art, Baby, Bowling, Dolls, Flowerpots, Moebius, Reindeer | [Middlebury 2005 and 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/) | Free to use with citation: D. Scharstein and C. Pal, *Learning conditional random fields for stereo*, CVPR 2007; H. Hirschmüller and D. Scharstein, *Evaluation of cost functions for stereo matching*, CVPR 2007 |
+| Earth | NASA EPIC camera on NOAA's DSCOVR, [epic.gsfc.nasa.gov](https://epic.gsfc.nasa.gov/) | Public domain (NASA imagery) |
+| Elephant, Cat, Elk, Camel, Raccoon | Eadweard Muybridge, *Animal Locomotion* (1887), [Wellcome Collection](https://wellcomecollection.org/) | Public Domain Mark |
+| Horse | Eadweard Muybridge (1878), [Library of Congress](https://www.loc.gov/item/97502309/) | No known restrictions on publication |
 
 The full list is in [`THIRD_PARTY_NOTICES.md`](https://github.com/AbstractPolygon/Lenticulator/blob/main/THIRD_PARTY_NOTICES.md).

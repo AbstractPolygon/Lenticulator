@@ -43,10 +43,12 @@ The [wiki](https://github.com/AbstractPolygon/Lenticulator/wiki) has a full user
 
 ## Sample images
 
-The Samples menu in the top bar loads ready-made sets: four 3D scenes, each with 7 camera views, from the
-[Middlebury 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/scenes2006/) (Scharstein & Pal, CVPR 2007;
-Hirschmüller & Scharstein, CVPR 2007), and an 11-frame animation from Eadweard Muybridge's
-[The Horse in Motion](https://www.loc.gov/item/97502309/) (1878, Library of Congress, no known restrictions).
+The Samples menu in the top bar loads ready-made sets: eight 3D scenes, each with 7 camera views, from the
+[Middlebury 2005 and 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/) (Scharstein & Pal, CVPR 2007;
+Hirschmüller & Scharstein, CVPR 2007); a rotating Earth from NASA's [EPIC](https://epic.gsfc.nasa.gov/) camera (public domain);
+and Eadweard Muybridge animations: an elephant, cat, elk, camel and raccoon from *Animal Locomotion* (1887,
+[Wellcome Collection](https://wellcomecollection.org/), public domain) and [The Horse in Motion](https://www.loc.gov/item/97502309/)
+(1878, Library of Congress). The desktop app doesn't package them: tick Settings → Samples → Sample images to download them.
 See `public/samples/SOURCES.txt`.
 
 ## Getting started

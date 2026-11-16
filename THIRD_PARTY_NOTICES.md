@@ -12,5 +12,7 @@ It bundles or loads the following components, which remain under their own licen
 | [ag-psd](https://github.com/Agamnentzar/ag-psd) | PSD import | MIT |
 | [gifenc](https://github.com/mattdesl/gifenc) | Animated GIF export | MIT |
 | [Electron](https://www.electronjs.org/) | Desktop app shell | MIT |
-| Middlebury 2006 stereo datasets (`public/samples/aloe`, `baby1`, `bowling2`, `flowerpots`) | Sample images | Free to use with citation: Scharstein & Pal, CVPR 2007; Hirschmüller & Scharstein, CVPR 2007 |
+| Middlebury 2005 and 2006 stereo datasets (`public/samples/aloe`, `art`, `baby1`, `bowling2`, `dolls`, `flowerpots`, `moebius`, `reindeer`) | Sample images | Free to use with citation: Scharstein & Pal, CVPR 2007; Hirschmüller & Scharstein, CVPR 2007 |
+| NASA EPIC camera on NOAA's DSCOVR (`public/samples/earth`) | Sample images | Public domain (NASA imagery) |
+| Eadweard Muybridge, *Animal Locomotion* (1887), Wellcome Collection (`public/samples/elephant`, `cat`, `elk`, `camel`, `raccoon`) | Sample images | Public Domain Mark |
 | Eadweard Muybridge, *The Horse in Motion* (1878), Library of Congress (`public/samples/horse`) | Sample images | No known restrictions on publication |
