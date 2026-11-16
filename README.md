@@ -34,6 +34,10 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 
 All processing happens locally. Images never leave your computer.
 
+## Documentation
+
+The [wiki](https://github.com/AbstractPolygon/Lenticulator/wiki) has a full user guide with screenshots. Its source is in `docs/wiki/`; edits there are published to the wiki automatically.
+
 ## Sample images
 
 The Samples menu in the top bar loads ready-made sets: four 3D scenes, each with 7 camera views, from the
