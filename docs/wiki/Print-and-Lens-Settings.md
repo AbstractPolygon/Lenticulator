@@ -15,7 +15,7 @@
 
 | Setting | Meaning |
 |---|---|
-| **Size preset**, **Width**, **Height**, **Units** | Print size without margins, in inches or mm. Presets keep the current portrait/landscape orientation. |
+| **Size preset**, **Width**, **Height**, **Units** | Print size without margins, in inches or mm. Print presets keep the current portrait/landscape orientation. **Social** presets (Instagram, Story/Reel/TikTok, YouTube, X, Facebook/LinkedIn, Pinterest) set exactly that many pixels at the current DPI and keep them when the DPI changes; GIF and video exports use the same pixel size. |
 | **Print DPI** | Your printer's resolution. Use its native resolution (e.g. 600/1200 Canon/HP, 720/1440 Epson). |
 | **Lens LPI** | Lenses per inch. Fractional values are allowed; use the value found with the [pitch test](Test-Patterns). |
 | **Lens direction** | **Vertical**: tilt left/right (needed for 3D). **Horizontal**: tilt up/down. |

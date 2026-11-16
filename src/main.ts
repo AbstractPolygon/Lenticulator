@@ -7,7 +7,7 @@ import { similarityToParams } from './core/align';
 import { rgbaToGray } from './core/gray';
 import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
 import {
-  AppState, Frame, MODE_DEFAULTS, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
+  AppState, Frame, MODE_DEFAULTS, SIZE_PRESETS, matchPreset, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
 } from './ui/state';
 import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, splitMultiPicture, thumbnail, uid } from './ui/images';
 import { decodeSpecial, sniffBlob } from './ui/decoders';
@@ -81,8 +81,8 @@ const unitFactor = () => (S().units === 'mm' ? 25.4 : 1);
 
 function fillStaticOptions() {
   const preset = $<HTMLSelectElement>('size-preset');
-  preset.innerHTML = '<option value="">Custom</option>' +
-    SIZE_PRESETS.map((p, i) => `<option value="${i}">${p.label}</option>`).join('');
+  const opts = (px: boolean) => SIZE_PRESETS.map((p, i) => (!!p.px === px ? `<option value="${i}">${p.label}</option>` : '')).join('');
+  preset.innerHTML = `<option value="">Custom</option><optgroup label="Print">${opts(false)}</optgroup><optgroup label="Social">${opts(true)}</optgroup>`;
   $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
   $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
 }
@@ -127,10 +127,7 @@ function syncForm() {
   $<HTMLInputElement>('d-invert').checked = s.depthInvert;
   $('depth-panel').hidden = s.mode !== '3d';
   $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
-  const pi = SIZE_PRESETS.findIndex(
-    (p) => (Math.abs(p.w - s.widthIn) < 1e-3 && Math.abs(p.h - s.heightIn) < 1e-3) ||
-      (Math.abs(p.h - s.widthIn) < 1e-3 && Math.abs(p.w - s.heightIn) < 1e-3),
-  );
+  const pi = matchPreset(s);
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
   document.querySelectorAll<HTMLButtonElement>('#effect-mode [data-mode]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
@@ -170,6 +167,12 @@ function bindSettings() {
   on('size-preset', 'change', (el) => {
     const p = SIZE_PRESETS[+el.value];
     if (!p) return;
+    // social sizes: exactly that many pixels at the current DPI
+    if (p.px) {
+      S().widthIn = p.w / S().dpi;
+      S().heightIn = p.h / S().dpi;
+      return;
+    }
     // keep current orientation (portrait/landscape)
     const portrait = S().heightIn > S().widthIn;
     S().widthIn = portrait ? Math.min(p.w, p.h) : Math.max(p.w, p.h);
@@ -178,7 +181,11 @@ function bindSettings() {
   on('width', 'change', (el) => (S().widthIn = pos(el.value, S().widthIn * unitFactor()) / unitFactor()));
   on('height', 'change', (el) => (S().heightIn = pos(el.value, S().heightIn * unitFactor()) / unitFactor()));
   on('units', 'change', (el) => (S().units = el.value as Settings['units']));
-  on('dpi', 'change', (el) => (S().dpi = Math.min(4800, pos(el.value, S().dpi))));
+  on('dpi', 'change', (el) => {
+    const social = SIZE_PRESETS[matchPreset(S())];
+    S().dpi = Math.min(4800, pos(el.value, S().dpi));
+    if (social?.px) Object.assign(S(), { widthIn: social.w / S().dpi, heightIn: social.h / S().dpi }); // keep its pixels
+  });
   on('lpi', 'change', (el) => (S().lpi = pos(el.value, S().lpi)));
   on('orientation', 'change', (el) => (S().orientation = el.value as Settings['orientation']));
   on('sampling', 'change', (el) => (S().sampling = el.value as Settings['sampling']));
@@ -1123,8 +1130,9 @@ function drawOutput() {
   ctx.drawImage(src, r.x, r.y, r.w, r.h);
 }
 
-/** Tilt preview at an arbitrary size (for GIF / video export). */
-const drawTilt: DrawFn = (ctx, W, H, t) => {
+/** Aligned frames at an arbitrary size: t = 0…1 across the frames, blended in between when `blend` (video export),
+ *  or exactly one frame per step (GIF export). */
+const frameDraw = (blend: () => boolean): DrawFn => (ctx, W, H, t) => {
   const s = S();
   const ordered = s.reverse ? [...activeFrames()].reverse() : activeFrames();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1132,25 +1140,35 @@ const drawTilt: DrawFn = (ctx, W, H, t) => {
   ctx.fillStyle = s.background;
   ctx.fillRect(0, 0, W, H);
   const out = outputPixels(s);
-  drawTiltFrames(ctx, ordered, t * (ordered.length - 1), $<HTMLInputElement>('preview-blend').checked,
+  drawTiltFrames(ctx, ordered, t * (ordered.length - 1), blend(),
     (f: Frame) => compose(scale(W / out.w, H / out.h), invert(previewMatrix(f, out))));
 };
+const drawTilt = frameDraw(() => $<HTMLInputElement>('preview-blend').checked);
+const drawPlain = frameDraw(() => false);
+
+/** GIF steps, one per frame: animations loop forward, 3D views rock back and forth. */
+function gifPositions(n: number, mode: Settings['mode']): number[] {
+  const fwd = Array.from({ length: n }, (_, i) => i / (n - 1));
+  return mode === 'animation' ? fwd : [...fwd, ...fwd.slice(1, -1).reverse()];
+}
 
 async function exportAnimation(kind: 'gif' | 'video') {
   const frames = activeFrames();
   if (frames.length < 2) return status('Need at least two frames.', 'error');
   const s = S();
-  // GIFs get smaller and use fewer in-between steps to keep files reasonable
-  const { w, h } = animSize(s.widthIn / s.heightIn, kind === 'gif' ? 600 : 1280);
-  const positions = sweepPositions(frames.length, kind === 'gif' ? 3 : 4);
-  const fps = 25;
-  const base = `lenticular_preview_${frames.length}f`;
+  // GIF: the aligned frames themselves, one GIF frame each; video: the tilt preview
+  const social = SIZE_PRESETS[matchPreset(s)];
+  const { w, h } = social?.px ? animSize(social.w / social.h, Math.max(social.w, social.h))
+    : animSize(s.widthIn / s.heightIn, kind === 'gif' ? 800 : 1280);
+  const positions = kind === 'gif' ? gifPositions(frames.length, s.mode) : sweepPositions(frames.length, 4);
+  const fps = kind === 'gif' ? 10 : 25;
+  const base = kind === 'gif' ? `animation_${frames.length}f` : `lenticular_preview_${frames.length}f`;
   setBusy(true);
   progress(0);
   status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
   try {
     if (kind === 'gif') {
-      const blob = await encodeGif(drawTilt, w, h, positions, fps, progress);
+      const blob = await encodeGif(drawPlain, w, h, positions, fps, progress);
       await download(blob, `${base}.gif`);
       status(`Saved ${(blob.size / 1e6).toFixed(1)} MB GIF (${w}×${h}).`);
     } else {

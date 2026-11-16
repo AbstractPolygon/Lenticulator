@@ -21,14 +21,14 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   **Generate frames**. With **Match LPI** ticked, the number of frames follows DPI ÷ LPI, one view per printed
   dot under each lens.
 - **Lens setup:** any LPI (fractional values for calibrated pitch), print DPI, vertical (L/R, 3D) or horizontal (up/down flip) lenses, reverse frame order, strip phase, and anti-aliased *blend* or crisp *nearest* sampling.
-- **Print size presets** (4×6, 5×7, 8×10, Letter, A-sizes …) in inches or mm, fill or fit framing, zoom and pan, and margins with **lens alignment bars** and **crop marks**.
+- **Size presets:** print sizes (4×6, 5×7, 8×10, Letter, A-sizes …) in inches or mm, and social sizes (Instagram, Story/Reel/TikTok, YouTube, X, Facebook/LinkedIn, Pinterest) in exact pixels, fill or fit framing, zoom and pan, and margins with **lens alignment bars** and **crop marks**.
 - **Test patterns**
   - *Pitch test:* bands at slightly different LPIs. The one that flips cleanly between solid black and white is your true (visual) pitch.
   - *Lens ruler:* inch and cm scales plus a line for every lens, to check printer scaling and line up the sheet.
   - *Frame order & phase test:* numbered colour frames that show tilt direction and which frame faces you head-on.
 - **Live preview:** move the mouse across the preview (or press Play) to simulate tilting the print.
 - **Zoom & pan** in Preview, Align and Output: use the −/+/Fit/100% buttons, the mouse wheel or a trackpad pinch (zooms around the cursor), or the keys `+` `-` `0` (fit) `1` (100%). To pan, drag when zoomed in, middle-drag, or hold Space and drag. Output goes up to 3200% so you can inspect individual print dots.
-- **Export** the print as PNG, JPG or TIFF, all tagged with the print DPI, or **Print** directly at exact physical size. Export an animated **GIF** or **video** (MP4, or WebM where MP4 isn't available) of the tilt preview to share. Inside the claude.ai artifact, TIFF downloads as a .zip.
+- **Export** the print as PNG, JPG or TIFF, all tagged with the print DPI, or **Print** directly at exact physical size. Export an animated **GIF** of the aligned frames (one GIF frame per frame), or a **video** (MP4, or WebM where MP4 isn't available) of the tilt preview, to share. Inside the claude.ai artifact, TIFF downloads as a .zip.
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 
 - **About** (top bar): version, source link, and licenses for the app, the depth model, libraries and samples.

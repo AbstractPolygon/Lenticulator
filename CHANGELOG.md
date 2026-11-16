@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.17
+- GIF export is a real frame animation: one GIF frame per aligned frame at 10 per second, with no lenticular
+  blending. Animations loop forward; 3D views rock back and forth. (Video still records the tilt preview.)
+- Size presets: a Social group (Instagram post and portrait, Story/Reel/TikTok, YouTube, X, Facebook/LinkedIn,
+  Pinterest). These set exactly that many pixels at the current DPI, keep their pixels when the DPI changes, and
+  GIF/video exports use the same pixel size.
+
 ## 0.3.16
 - Desktop: checks GitHub for a newer release on launch. The popup's Download button links straight to the
   installer for your system (Windows x64/arm64/32-bit, macOS Intel/Apple silicon, Linux AppImage or Snap).

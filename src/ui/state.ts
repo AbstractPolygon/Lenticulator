@@ -99,7 +99,9 @@ export interface AppState {
   keyPoint: { x: number; y: number } | null;
 }
 
-export const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
+/** Print sizes in inches; social (screen) sizes in pixels, with a fixed orientation. */
+export interface SizePreset { label: string; w: number; h: number; px?: boolean }
+export const SIZE_PRESETS: SizePreset[] = [
   { label: '4 × 6 in', w: 6, h: 4 },
   { label: '5 × 7 in', w: 7, h: 5 },
   { label: '8 × 10 in', w: 10, h: 8 },
@@ -112,7 +114,23 @@ export const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
   { label: 'A3 (297 × 420 mm)', w: 420 / 25.4, h: 297 / 25.4 },
   { label: 'Business card (3.5 × 2 in)', w: 3.5, h: 2 },
   { label: 'Postcard (6 × 4.25 in)', w: 6, h: 4.25 },
+  { label: 'Instagram post 1080 × 1080', w: 1080, h: 1080, px: true },
+  { label: 'Instagram portrait 1080 × 1350', w: 1080, h: 1350, px: true },
+  { label: 'Story / Reel / TikTok 1080 × 1920', w: 1080, h: 1920, px: true },
+  { label: 'YouTube 1920 × 1080', w: 1920, h: 1080, px: true },
+  { label: 'X post 1600 × 900', w: 1600, h: 900, px: true },
+  { label: 'Facebook / LinkedIn 1200 × 628', w: 1200, h: 628, px: true },
+  { label: 'Pinterest 1000 × 1500', w: 1000, h: 1500, px: true },
 ];
+
+/** The preset matching the current size (either orientation for print sizes), or -1. */
+export function matchPreset(s: { widthIn: number; heightIn: number; dpi: number }): number {
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-3;
+  return SIZE_PRESETS.findIndex((p) => {
+    if (p.px) return eq(p.w / s.dpi, s.widthIn) && eq(p.h / s.dpi, s.heightIn);
+    return (eq(p.w, s.widthIn) && eq(p.h, s.heightIn)) || (eq(p.h, s.widthIn) && eq(p.w, s.heightIn));
+  });
+}
 
 const KEY = 'lenticulator.settings.v1';
 
