@@ -53,7 +53,7 @@ export async function encodeGif(
     draw(ctx, w, h, steps[i].pos);
     const { data } = ctx.getImageData(0, 0, w, h);
     const palette = quantize(data, 256);
-    gif.writeFrame(ditherToPalette(data, w, h, palette, dither), w, h, { palette, delay: Math.round(steps[i].ms) });
+    gif.writeFrame(ditherToPalette(data, w, h, palette, dither), w, h, { palette, delay: Math.max(20, Math.round(steps[i].ms)) });
     onProgress?.((i + 1) / steps.length);
     if (i % 3 === 0) await tick(); // keep the UI responsive
   }

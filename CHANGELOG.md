@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.32
+- **In-between** frames for GIFs and frame videos: up to 4 motion-interpolated frames between each pair, for a
+  smoother wiggle at the same speed.
+
 ## 0.3.31
 - Video export can play the **Frames** (like the GIF, with its fps, loop and hold) for Reels and TikTok, or record the
   **Tilt** preview as before. Frames is the default.

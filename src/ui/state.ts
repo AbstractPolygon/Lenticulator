@@ -39,6 +39,8 @@ export interface Settings {
   gifLoop: 'pingpong' | 'forward';
   /** extra time on the first and last frames, ms */
   gifHold: number;
+  /** GIF / frame video: motion-interpolated frames between each pair of frames (0–4) */
+  inBetween: number;
   /** video: how many back-and-forth sweeps to record */
   videoLoops: number;
   /** video: the frames (like the GIF) or the tilt preview */
@@ -84,6 +86,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gifDither: 'atkinson',
   gifLoop: 'pingpong',
   gifHold: 0,
+  inBetween: 0,
   videoLoops: 2,
   videoSource: 'frames',
   psdLayers: false,

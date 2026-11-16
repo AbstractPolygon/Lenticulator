@@ -314,6 +314,9 @@
             </select>
             <label class="check"><input id="gif-hold" aria-label="Hold end frames" title="Show the first and last frames this much longer, in milliseconds (0–2000)" type="number" min="0" max="2000" step="50" value="0" /> ms hold</label>
           </div>
+          <div class="row" id="inbetween-row" hidden>
+            <label class="check"><input id="inbetween" aria-label="In-between frames" title="Motion-interpolated frames added between each pair of frames (0–4), for a smoother wiggle. The speed stays the same" type="number" min="0" max="4" step="1" value="0" /> in-between</label>
+          </div>
           <div class="row" id="video-loops-row" hidden>
             <select id="video-source" aria-label="Video" title="Frames: plays the frames like the GIF (fps, loop and hold apply). Tilt: records the simulated tilt of the print">
               <option value="frames">Frames</option>

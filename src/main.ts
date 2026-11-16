@@ -17,6 +17,7 @@ import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toT
 import { zipStore } from './core/fileformats';
 import { scanProfiles, splitScan } from './core/split';
 import { frameSequence } from './core/timing';
+import { estimateFlow, interpolate } from './core/flow';
 import { framesForLens } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
@@ -126,6 +127,8 @@ function syncForm() {
   // fps, loop and hold apply to GIFs and to frame videos; dithering only to GIFs
   const frameAnim = s.exportFormat === 'gif' || (s.exportFormat === 'video' && s.videoSource === 'frames');
   $('gif-timing').hidden = !frameAnim;
+  $('inbetween-row').hidden = !frameAnim;
+  num('inbetween', s.inBetween, 0);
   $<HTMLSelectElement>('video-source').value = s.videoSource;
   $('gif-speed').hidden = !(s.exportFormat === 'gif' || (s.exportFormat === 'video' && s.videoSource === 'frames'));
   $('gif-dither').hidden = s.exportFormat !== 'gif';
@@ -227,6 +230,7 @@ function bindSettings() {
   });
   on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
   on('video-source', 'change', (el) => (S().videoSource = el.value as Settings['videoSource']));
+  on('inbetween', 'change', (el) => (S().inBetween = Math.max(0, Math.min(4, Math.round(+el.value) || 0))));
   on('gif-loop', 'change', (el) => (S().gifLoop = el.value as Settings['gifLoop']));
   on('gif-hold', 'change', (el) => (S().gifHold = Math.max(0, Math.min(2000, Math.round(+el.value) || 0))));
   on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
@@ -1291,6 +1295,37 @@ function showAnim(on: boolean) {
   $('output-title').textContent = anim!.name;
 }
 
+/**
+ * Draw function over the frames plus `k` motion-interpolated frames between each pair (rendered at w×h).
+ * Positions 0…1 index the expanded sequence of n + (n-1)·k frames.
+ */
+async function inbetweenDraw(n: number, k: number, w: number, h: number): Promise<{ draw: DrawFn; count: number }> {
+  const { c, ctx } = canvas2d(w, h, true);
+  const sc = Math.min(1, 400 / Math.max(w, h));
+  const small = canvas2d(w * sc, h * sc, true);
+  const real: Uint8ClampedArray[] = [], grays = [];
+  for (let i = 0; i < n; i++) {
+    drawPlain(ctx, w, h, n === 1 ? 0 : i / (n - 1));
+    real.push(ctx.getImageData(0, 0, w, h).data);
+    small.ctx.drawImage(c, 0, 0, small.c.width, small.c.height);
+    grays.push(rgbaToGray(small.ctx.getImageData(0, 0, small.c.width, small.c.height).data, small.c.width, small.c.height));
+  }
+  const flows: ReturnType<typeof estimateFlow>[] = [];
+  for (let i = 0; i + 1 < n; i++) {
+    status(`Finding motion… ${i + 1}/${n - 1}`, 'info', 60000);
+    flows.push(estimateFlow(grays[i], grays[i + 1]));
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  const count = n + (n - 1) * k;
+  const draw: DrawFn = (cx, W, H, pos) => {
+    const j = Math.round(pos * (count - 1));
+    const seg = Math.min(n - 1, Math.floor(j / (k + 1))), r = j - seg * (k + 1);
+    const data = r === 0 ? real[seg] : interpolate(real[seg], real[seg + 1], w, h, flows[seg], 1 / sc, r / (k + 1));
+    cx.putImageData(new ImageData(new Uint8ClampedArray(data), w, h), 0, 0);
+  };
+  return { draw, count };
+}
+
 async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   const frames = activeFrames();
   if (frames.length < 2) { status('Need at least two frames.', 'error'); return false; }
@@ -1301,7 +1336,7 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
     : animSize(s.widthIn / s.heightIn, kind === 'gif' ? 800 : 1280);
   // GIF and frame videos: the frames with their timing; tilt videos: a smooth sweep at 25 fps
   const tilt = kind === 'video' && s.videoSource === 'tilt';
-  const steps = tilt ? sweepPositions(frames.length, 4).map((pos) => ({ pos, ms: 40 }))
+  let steps = tilt ? sweepPositions(frames.length, 4).map((pos) => ({ pos, ms: 40 }))
     : frameSequence(frames.length, s.gifLoop, s.gifFps, s.gifHold);
   const base = tilt ? `lenticular_preview_${frames.length}f` : `animation_${frames.length}f`;
   setBusy(true);
@@ -1309,9 +1344,17 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
   try {
     const key = animKey(kind);
+    let draw = tilt ? drawTilt : drawPlain;
+    if (!tilt && s.inBetween > 0 && frames.length > 1) {
+      // more frames at a proportionally higher rate: same speed, smoother motion
+      const ib = await inbetweenDraw(frames.length, s.inBetween, w, h);
+      draw = ib.draw;
+      steps = frameSequence(ib.count, s.gifLoop, s.gifFps * (s.inBetween + 1), s.gifHold);
+      status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
+    }
     const out = kind === 'gif'
-      ? { blob: await encodeGif(drawPlain, w, h, steps, progress, s.gifDither), ext: 'gif' }
-      : await recordVideo(tilt ? drawTilt : drawPlain, w, h, steps, s.videoLoops, progress);
+      ? { blob: await encodeGif(draw, w, h, steps, progress, s.gifDither), ext: 'gif' }
+      : await recordVideo(draw, w, h, steps, s.videoLoops, progress);
     if (anim) URL.revokeObjectURL(anim.url);
     anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key, w, h };
     showTab('output');
