@@ -307,6 +307,13 @@
               <option value="bayer">Ordered</option>
             </select>
           </div>
+          <div class="row" id="gif-timing" hidden>
+            <select id="gif-loop" aria-label="Loop" title="Play the frames back and forth (wigglegram), or loop one way (animation)">
+              <option value="pingpong">Back and forth</option>
+              <option value="forward">Loop</option>
+            </select>
+            <label class="check"><input id="gif-hold" aria-label="Hold end frames" title="Show the first and last frames this much longer, in milliseconds (0–2000)" type="number" min="0" max="2000" step="50" value="0" /> ms hold</label>
+          </div>
           <div class="row" id="video-loops-row" hidden>
             <label class="check"><input id="video-loops" aria-label="Video loops" title="How many times the video tilts back and forth (1–20)" type="number" min="1" max="20" step="1" value="2" /> loops</label>
           </div>

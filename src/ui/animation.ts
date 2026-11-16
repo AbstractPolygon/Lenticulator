@@ -4,6 +4,7 @@
  */
 
 import { Dither, ditherToPalette } from '../core/dither';
+import type { Step } from '../core/timing';
 
 export type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -42,19 +43,18 @@ interface GifEncoderApi {
 }
 
 export async function encodeGif(
-  draw: DrawFn, w: number, h: number, positions: number[], fps: number,
+  draw: DrawFn, w: number, h: number, steps: Step[],
   onProgress?: (f: number) => void, dither: Dither = 'none',
 ): Promise<Blob> {
   const { GIFEncoder, quantize } = (await import('gifenc')) as unknown as GifEncoderApi;
   const gif = GIFEncoder();
   const { ctx } = canvas(w, h);
-  const delay = Math.round(1000 / fps);
-  for (let i = 0; i < positions.length; i++) {
-    draw(ctx, w, h, positions[i]);
+  for (let i = 0; i < steps.length; i++) {
+    draw(ctx, w, h, steps[i].pos);
     const { data } = ctx.getImageData(0, 0, w, h);
     const palette = quantize(data, 256);
-    gif.writeFrame(ditherToPalette(data, w, h, palette, dither), w, h, { palette, delay });
-    onProgress?.((i + 1) / positions.length);
+    gif.writeFrame(ditherToPalette(data, w, h, palette, dither), w, h, { palette, delay: Math.round(steps[i].ms) });
+    onProgress?.((i + 1) / steps.length);
     if (i % 3 === 0) await tick(); // keep the UI responsive
   }
   gif.finish();

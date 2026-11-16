@@ -35,6 +35,10 @@ export interface Settings {
   gifFps: number;
   /** GIF colour dithering */
   gifDither: 'none' | 'floyd' | 'atkinson' | 'bayer';
+  /** GIF / frame video: back and forth, or a one-way loop */
+  gifLoop: 'pingpong' | 'forward';
+  /** extra time on the first and last frames, ms */
+  gifHold: number;
   /** video: how many back-and-forth sweeps to record */
   videoLoops: number;
   /** import each Photoshop layer as a frame */
@@ -76,6 +80,8 @@ export const DEFAULT_SETTINGS: Settings = {
   exportFormat: 'png',
   gifFps: 10,
   gifDither: 'atkinson',
+  gifLoop: 'pingpong',
+  gifHold: 0,
   videoLoops: 2,
   psdLayers: false,
   depthFrames: 10,
@@ -183,6 +189,6 @@ export function outputPixels(s: Settings) {
  * Animation/flip: horizontal lenses so both eyes see the same frame (no ghosting), tilt up/down.
  */
 export const MODE_DEFAULTS: Record<EffectMode, Partial<Settings>> = {
-  '3d': { orientation: 'vertical', alignMode: 'keypoint' },
-  animation: { orientation: 'horizontal', alignMode: 'translation' },
+  '3d': { orientation: 'vertical', alignMode: 'keypoint', gifLoop: 'pingpong' },
+  animation: { orientation: 'horizontal', alignMode: 'translation', gifLoop: 'forward' },
 };

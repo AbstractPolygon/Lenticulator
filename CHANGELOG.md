@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.30
+- GIF timing: **Back and forth** or **Loop** (defaults: back and forth for 3D, loop for Animation), and a **hold** that
+  shows the first and last frames longer.
+
 ## 0.3.29
 - **Split scan** (Frames panel): splits the selected frame, a film scan with 2, 3 or 4 frames side by side (Nimslo,
   Nishika, Reto3D …), into separate equal-size frames, finding the gaps and trimming the film border.

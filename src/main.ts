@@ -16,6 +16,7 @@ import type { WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
 import { zipStore } from './core/fileformats';
 import { scanProfiles, splitScan } from './core/split';
+import { frameSequence } from './core/timing';
 import { framesForLens } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
@@ -120,6 +121,9 @@ function syncForm() {
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
   num('gif-fps', s.gifFps, 1);
   $<HTMLSelectElement>('gif-dither').value = s.gifDither;
+  $<HTMLSelectElement>('gif-loop').value = s.gifLoop;
+  num('gif-hold', s.gifHold, 0);
+  $('gif-timing').hidden = s.exportFormat !== 'gif';
   $('gif-speed').hidden = s.exportFormat !== 'gif';
   num('video-loops', s.videoLoops, 0);
   $('video-loops-row').hidden = s.exportFormat !== 'video';
@@ -218,6 +222,8 @@ function bindSettings() {
     showAnim(!$('tab-output').hidden);
   });
   on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
+  on('gif-loop', 'change', (el) => (S().gifLoop = el.value as Settings['gifLoop']));
+  on('gif-hold', 'change', (el) => (S().gifHold = Math.max(0, Math.min(2000, Math.round(+el.value) || 0))));
   on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
   on('gif-fps', 'change', (el) => (S().gifFps = Math.max(1, Math.min(50, Math.round(+el.value) || 10))));
   on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
@@ -1234,10 +1240,6 @@ const drawTilt = frameDraw(() => $<HTMLInputElement>('preview-blend').checked);
 const drawPlain = frameDraw(() => false);
 
 /** GIF steps, one per frame: animations loop forward, 3D views rock back and forth. */
-function gifPositions(n: number, mode: Settings['mode']): number[] {
-  const fwd = Array.from({ length: n }, (_, i) => i / (n - 1));
-  return mode === 'animation' ? fwd : [...fwd, ...fwd.slice(1, -1).reverse()];
-}
 
 const animKey = (kind: 'gif' | 'video') => JSON.stringify([kind, S(), activeFrames().map((f) => [f.id, f.transform])]);
 
@@ -1292,8 +1294,9 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   const social = SIZE_PRESETS[matchPreset(s)];
   const { w, h } = social?.px ? animSize(social.w / social.h, Math.max(social.w, social.h))
     : animSize(s.widthIn / s.heightIn, kind === 'gif' ? 800 : 1280);
-  const positions = kind === 'gif' ? gifPositions(frames.length, s.mode) : sweepPositions(frames.length, 4);
-  const fps = kind === 'gif' ? s.gifFps : 25;
+  const steps = frameSequence(frames.length, s.gifLoop, s.gifFps, s.gifHold);
+  const positions = sweepPositions(frames.length, 4);
+  const fps = 25;
   const base = kind === 'gif' ? `animation_${frames.length}f` : `lenticular_preview_${frames.length}f`;
   setBusy(true);
   progress(0);
@@ -1301,7 +1304,7 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
   try {
     const key = animKey(kind);
     const out = kind === 'gif'
-      ? { blob: await encodeGif(drawPlain, w, h, positions, fps, progress, s.gifDither), ext: 'gif' }
+      ? { blob: await encodeGif(drawPlain, w, h, steps, progress, s.gifDither), ext: 'gif' }
       : await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
     if (anim) URL.revokeObjectURL(anim.url);
     anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key, w, h };
