@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.26
+- Zoom works on a rendered GIF or video in the Output tab (buttons, Fit, 100%, mouse wheel, keyboard), as it does
+  in Preview, Align and on the rendered print.
+- Render, Download and Print share one row; Download (and Print, for stills) appear only after something is rendered.
+- Align: the photo outside the print area is dimmed (with Show print area on).
+
 ## 0.3.25
 - Preview: the playhead only follows the mouse while the button is held (click or drag across the preview), not on hover.
 

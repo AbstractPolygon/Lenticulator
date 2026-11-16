@@ -271,8 +271,8 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
 #gif-dither { width: auto; flex: 1; }
 
 /* rendered GIF / video shown in the Output tab */
-.anim-view { position: absolute; inset: 0; display: grid; place-items: center; background: var(--stage); padding: 16px; }
-.anim-view img, .anim-view video { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 24px rgba(0,0,0,.35); }
+.anim-view { position: absolute; inset: 0; display: grid; place-items: safe center; background: var(--stage); padding: 16px; overflow: auto; }
+.anim-view img, .anim-view video { display: block; max-width: none; image-rendering: auto; box-shadow: 0 4px 24px rgba(0,0,0,.35); }
 
 /* playhead (view angle slider): a rectangle, taller than wide */
 #view { -webkit-appearance: none; appearance: none; height: 22px; background: transparent; cursor: pointer; }

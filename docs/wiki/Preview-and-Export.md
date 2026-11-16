@@ -31,7 +31,7 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 
 ![Render and export panel](images/export-panel.png)
 
-1. Choose a format, then click **Render** to interlace the frames at full print resolution. The result appears in the **Output** tab. For **GIF** and **Video**, **Render** makes the animation instead and plays it in the *Output* tab; **Download** saves it.
+1. Choose a format, then click **Render** to interlace the frames at full print resolution. The result appears in the **Output** tab. For **GIF** and **Video**, **Render** makes the animation instead and plays it in the *Output* tab; **Download** saves it. **Download** (and **Print…**, for PNG/JPG/TIF) appears once something has been rendered.
 2. Click **Download**.
 
 | Format | Contents |

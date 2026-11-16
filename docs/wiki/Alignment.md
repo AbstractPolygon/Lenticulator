@@ -47,4 +47,4 @@ The overlay dropdown below the Align view compares the selected frame with the r
 
 ![Difference overlay](images/align-difference.jpg)
 
-**Show print area** outlines the part of the image that will be printed (yellow dashed line). The same overlays are available in the Preview tab: see [Preview and Export](Preview-and-Export).
+**Show print area** outlines the part of the image that will be printed (yellow dashed line) and dims everything outside it. The same overlays are available in the Preview tab: see [Preview and Export](Preview-and-Export).

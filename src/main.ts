@@ -230,12 +230,21 @@ function activeFrames(): Frame[] {
   return state.frames.filter((f) => f.enabled);
 }
 
+/** The last rendered GIF / video, shown in the Output tab; `key` says which frames and settings made it. */
+let anim: { kind: 'gif' | 'video'; blob: Blob; name: string; url: string; key: string; w: number; h: number } | null = null;
+
 const isAnimFormat = (f: Settings['exportFormat']) => f === 'gif' || f === 'video';
 
 /** Stills need a rendered print; GIF / video only need frames. */
 function updateExportButtons() {
-  const anim = isAnimFormat(S().exportFormat);
-  ($('btn-download') as HTMLButtonElement).disabled = busy || (anim ? activeFrames().length < 2 : !result);
+  const fmt = S().exportFormat;
+  const animFmt = isAnimFormat(fmt);
+  const dl = $('btn-download') as HTMLButtonElement;
+  dl.hidden = animFmt ? !(anim && anim.kind === fmt) : !result;
+  dl.disabled = busy;
+  const pr = $('btn-print') as HTMLButtonElement;
+  pr.hidden = animFmt || !result || inArtifactHost();
+  pr.disabled = busy;
 }
 
 function updateLensInfo() {
@@ -537,6 +546,12 @@ function contentFrame(ctx: CanvasRenderingContext2D, r: Rect, fill: string) {
 function updateZoomLabels() {
   const name = currentView();
   const el = document.querySelector<HTMLElement>('#zoom-controls .zoom-label');
+  if (el && name === 'output' && animVisible()) {
+    const a = $('anim-view').firstElementChild as HTMLElement;
+    const nw = anim?.w;
+    if (nw) el.textContent = `${Math.round((a.getBoundingClientRect().width / nw) * 100)}%`;
+    return;
+  }
   if (el && name) el.textContent = `${Math.round(views[name].percent(dprNow()))}%`;
 }
 
@@ -635,6 +650,13 @@ function drawAlign() {
     const out = { w: s.widthIn, h: s.heightIn };
     const m = outputMap(out, { w: ref.width, h: ref.height }, framing(s));
     const pts = [[0, 0], [out.w, 0], [out.w, out.h], [0, out.h]].map(([x, y]) => apply(m, x, y));
+    // dim everything outside the print area (even-odd: the whole view minus the print area)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+    ctx.closePath();
+    ctx.fill('evenodd');
     ctx.strokeStyle = '#ffd84a';
     ctx.lineWidth = 1.5 * dpr;
     ctx.setLineDash([6 * dpr, 4 * dpr]);
@@ -748,7 +770,9 @@ function bindViews() {
       if (n) { state.selectedId = n.id; renderFrameList(); scheduleRedraw(); }
     }
   });
-  window.addEventListener('resize', () => { scheduleRedraw(); if (!$('tab-output').hidden) drawOutput(); });
+  window.addEventListener('resize', () => { scheduleRedraw(); if (!$('tab-output').hidden) { drawOutput(); layoutAnim(); } });
+  // mouse wheel / trackpad pinch zooms the rendered GIF / video too
+  $('anim-view').addEventListener('wheel', (e) => { e.preventDefault(); zoomAnim(e.deltaY < 0 ? 'in' : 'out'); }, { passive: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -790,7 +814,8 @@ function bindZoom() {
   $('zoom-controls').addEventListener('click', (e) => {
     const cmd = (e.target as HTMLElement).closest<HTMLElement>('[data-z]')?.dataset.z;
     const name = currentView();
-    if (cmd && name) zoomCommand(name, cmd);
+    if (cmd && name === 'output' && animVisible()) zoomAnim(cmd);
+    else if (cmd && name) zoomCommand(name, cmd);
   });
 
   for (const name of Object.keys(canvasOf) as ViewName[]) {
@@ -847,7 +872,7 @@ function bindZoom() {
     const name = currentView();
     if (!name || e.metaKey || e.ctrlKey || e.altKey) return;
     const cmd = { '+': 'in', '=': 'in', '-': 'out', '_': 'out', '0': 'fit', '1': 'actual' }[e.key];
-    if (cmd) { e.preventDefault(); zoomCommand(name, cmd); }
+    if (cmd) { e.preventDefault(); if (name === 'output' && animVisible()) zoomAnim(cmd); else zoomCommand(name, cmd); }
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space') { spaceDown = false; document.body.classList.remove('space-pan'); }
@@ -1102,7 +1127,6 @@ function setResult(r: RenderResult | null) {
   result = r;
   resultThumb = null;
   if (!r) {
-    ($('btn-print') as HTMLButtonElement).disabled = true;
     $('output-title').textContent = '';
     updateExportButtons();
     drawOutput();
@@ -1115,7 +1139,6 @@ function setResult(r: RenderResult | null) {
     ctx.drawImage(r.canvas, 0, 0, c.width, c.height);
     resultThumb = { canvas: c, scale: c.width / r.width };
   }
-  ($('btn-print') as HTMLButtonElement).disabled = false;
   updateExportButtons();
   $('output-title').textContent =
     `${r.title} — ${r.width}×${r.height} px = ${(r.width / r.dpi).toFixed(3)}×${(r.height / r.dpi).toFixed(3)} in`;
@@ -1165,9 +1188,33 @@ function gifPositions(n: number, mode: Settings['mode']): number[] {
   return mode === 'animation' ? fwd : [...fwd, ...fwd.slice(1, -1).reverse()];
 }
 
-/** The last rendered GIF / video, shown in the Output tab; `key` says which frames and settings made it. */
-let anim: { kind: 'gif' | 'video'; blob: Blob; name: string; url: string; key: string } | null = null;
 const animKey = (kind: 'gif' | 'video') => JSON.stringify([kind, S(), activeFrames().map((f) => [f.id, f.transform])]);
+
+/** Zoom of the rendered GIF / video in the Output tab: null = fit, otherwise a scale (1 = actual pixels). */
+let animZoom: number | null = null;
+const animVisible = () => !$('anim-view').hidden && !!$('anim-view').firstElementChild;
+
+function layoutAnim() {
+  const view = $('anim-view');
+  const el = view.firstElementChild as HTMLImageElement | HTMLVideoElement | null;
+  if (!el) return;
+  if (!anim) return;
+  const nw = anim.w, nh = anim.h;
+  const fit = Math.min((view.clientWidth - 32) / nw, (view.clientHeight - 32) / nh);
+  const z = animZoom ?? fit;
+  el.style.width = `${Math.round(nw * z)}px`;
+  el.style.height = `${Math.round(nh * z)}px`;
+  updateZoomLabels();
+}
+
+function zoomAnim(cmd: string) {
+  const el = $('anim-view').firstElementChild as HTMLElement | null;
+  const nw = anim?.w;
+  const cur = el && nw ? el.getBoundingClientRect().width / nw : 1;
+  animZoom = cmd === 'fit' ? null : cmd === 'actual' ? 1
+    : Math.min(32, Math.max(0.05, cur * (cmd === 'in' ? 1.25 : 1 / 1.25)));
+  layoutAnim();
+}
 
 function showAnim(on: boolean) {
   const view = $('anim-view');
@@ -1178,8 +1225,11 @@ function showAnim(on: boolean) {
   view.dataset.url = anim!.url;
   const el = anim!.kind === 'gif' ? Object.assign(document.createElement('img'), { alt: 'Rendered GIF' })
     : Object.assign(document.createElement('video'), { autoplay: true, loop: true, muted: true, controls: true, playsInline: true });
+  el.addEventListener(el instanceof HTMLVideoElement ? 'loadedmetadata' : 'load', layoutAnim);
   el.src = anim!.url;
+  animZoom = null;
   view.replaceChildren(el);
+  layoutAnim();
   $('output-title').textContent = anim!.name;
 }
 
@@ -1203,7 +1253,7 @@ async function renderAnimation(kind: 'gif' | 'video'): Promise<boolean> {
       ? { blob: await encodeGif(drawPlain, w, h, positions, fps, progress, s.gifDither), ext: 'gif' }
       : await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
     if (anim) URL.revokeObjectURL(anim.url);
-    anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key };
+    anim = { kind, blob: out.blob, name: `${base}.${out.ext}`, url: URL.createObjectURL(out.blob), key, w, h };
     showTab('output');
     status(`Rendered ${(out.blob.size / 1e6).toFixed(1)} MB ${out.ext.toUpperCase()} (${w}×${h}).`);
     return true;
@@ -1425,10 +1475,7 @@ if (!videoFormat()) {
   if (S().exportFormat === 'video') S().exportFormat = 'png';
 }
 
-if (inArtifactHost()) {
-  // the sandboxed viewer can't open print dialogs
-  $('btn-print').hidden = true;
-}
+// the sandboxed artifact viewer can't open print dialogs: updateExportButtons keeps Print hidden there
 
 // Render engine (per-device preference)
 let renderer = 'auto';
