@@ -4,6 +4,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 
 ## Features
 
+- **3D depth or animation/flip.** Choose the effect at the top of the lens panel. 3D uses vertical lenses, so each eye sees a different view, and key-point alignment, and adds a red/cyan anaglyph preview. Animation uses horizontal lenses, so both eyes see the same frame, and shift-only alignment.
 - **Import frames** with the button or by dragging **images or whole folders** (subfolders included) anywhere onto the window. Files are sorted by name, numerically (`frame2` before `frame10`). Supported formats: JPEG, PNG, WebP, GIF (first frame), BMP, AVIF, SVG and ICO, plus **MPO** files from 3D cameras (split automatically). HEIC and TIFF open only where the browser engine can decode them, which Chromium and the desktop app cannot. Drag to reorder, exclude frames, and pick the alignment reference (★).
 - **Auto-align**
   - *Whole image: shift + rotate + scale.* Phase correlation followed by a robust Gauss–Newton similarity fit on an image pyramid, accurate to sub-pixel level. Use it for hand-held shots and scans.
@@ -17,6 +18,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - *Lens ruler:* inch and cm scales plus a line for every lens, to check printer scaling and line up the sheet.
   - *Frame order & phase test:* numbered colour frames that show tilt direction and which frame faces you head-on.
 - **Live preview:** move the mouse across the preview (or press Play) to simulate tilting the print.
+- **Zoom & pan** in Preview, Align and Output: use the −/+/Fit/100% buttons, the mouse wheel or a trackpad pinch (zooms around the cursor), or the keys `+` `-` `0` (fit) `1` (100%). To pan, drag when zoomed in, middle-drag, or hold Space and drag. Output goes up to 3200% so you can inspect individual print dots.
 - **Export** as PNG or uncompressed TIFF, both tagged with the print DPI, or **Print** directly at exact physical size.
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 

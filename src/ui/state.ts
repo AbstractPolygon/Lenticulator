@@ -2,7 +2,11 @@ import type { FrameTransform, Framing } from '../core/geometry';
 import type { Orientation, Sampling } from '../core/interlace';
 import type { AlignMode } from '../core/align';
 
+export type EffectMode = '3d' | 'animation';
+
 export interface Settings {
+  /** what the print should do: show depth, or flip/animate */
+  mode: EffectMode;
   /** inches */
   widthIn: number;
   heightIn: number;
@@ -27,6 +31,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  mode: '3d',
   widthIn: 6,
   heightIn: 4,
   units: 'in',
@@ -44,7 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   marginIn: 0,
   alignBars: true,
   cropMarks: true,
-  alignMode: 'similarity',
+  alignMode: 'keypoint',
   exportFormat: 'png',
 };
 
@@ -118,3 +123,13 @@ export function framing(s: Settings): Framing {
 export function outputPixels(s: Settings) {
   return { w: Math.max(1, Math.round(s.widthIn * s.dpi)), h: Math.max(1, Math.round(s.heightIn * s.dpi)) };
 }
+
+/**
+ * Sensible defaults when switching effect type.
+ * 3D: vertical lenses so each eye sees a different frame (stereo), aligned on a key subject.
+ * Animation/flip: horizontal lenses so both eyes see the same frame (no ghosting), tilt up/down.
+ */
+export const MODE_DEFAULTS: Record<EffectMode, Partial<Settings>> = {
+  '3d': { orientation: 'vertical', alignMode: 'keypoint' },
+  animation: { orientation: 'horizontal', alignMode: 'translation' },
+};

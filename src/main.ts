@@ -7,10 +7,11 @@ import { similarityToParams } from './core/align';
 import { rgbaToGray } from './core/gray';
 import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
 import {
-  AppState, Frame, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
+  AppState, Frame, MODE_DEFAULTS, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
 } from './ui/state';
 import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
 import { WorkerClient } from './ui/workerClient';
+import { Rect, ViewState } from './ui/view';
 import type { FrameRef, WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toPng, toTiff } from './ui/export';
 
@@ -104,6 +105,15 @@ function syncForm() {
       (Math.abs(p.h - s.widthIn) < 1e-3 && Math.abs(p.w - s.heightIn) < 1e-3),
   );
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
+  document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
+    b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
+  const is3d = s.mode === '3d';
+  $('mode-hint').textContent = is3d
+    ? 'Frames are views from left to right (camera slid sideways). Vertical lenses give each eye a different view, so the print looks deep without glasses.'
+    : 'Frames play in order as the print is tilted. Horizontal lenses (tilt up/down) let both eyes see the same frame, which avoids ghosting.';
+  $('preview-mode-wrap').hidden = !is3d;
+  if (!is3d) $<HTMLSelectElement>('preview-mode').value = 'tilt';
+  $('view-label').textContent = is3d ? 'View angle' : 'Tilt';
   updateLensInfo();
   updateAlignHint();
 }
@@ -120,6 +130,18 @@ function bindSettings() {
     const n = parseFloat(v);
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
+  document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const mode = b.dataset.mode as Settings['mode'];
+      if (mode === S().mode) return;
+      Object.assign(S(), { mode }, MODE_DEFAULTS[mode]);
+      saveSettings(S());
+      syncForm();
+      scheduleRedraw();
+      status(mode === '3d'
+        ? '3D mode: vertical lenses, key-point alignment.'
+        : 'Animation mode: horizontal lenses, shift-only alignment.');
+    }));
   on('size-preset', 'change', (el) => {
     const p = SIZE_PRESETS[+el.value];
     if (!p) return;
@@ -167,6 +189,10 @@ function updateLensInfo() {
   ];
   if (n > st.maxUsefulFrames)
     lines.push(`<span class="warn">⚠ ${n} frames exceeds ${st.maxUsefulFrames} dots/lens – raise DPI or use fewer frames.</span>`);
+  if (s.mode === 'animation' && s.orientation === 'vertical')
+    lines.push('<span class="warn">Vertical lenses with animation: each eye may see a different frame (ghosting). Horizontal is usually better.</span>');
+  if (s.mode === '3d' && s.orientation === 'horizontal')
+    lines.push('<span class="warn">3D needs vertical lenses so each eye sees a different view.</span>');
   if (mpx > 250) lines.push('<span class="warn">⚠ Very large output; browsers may fail above ~250 MP.</span>');
   if (!st.integerPixels)
     lines.push(`Tip: ${Math.round(st.pixelsPerLens) * s.lpi} DPI would give a whole number of dots per lens.`);
@@ -366,23 +392,47 @@ function scheduleRedraw() {
   redrawQueued = true;
   requestAnimationFrame(() => {
     redrawQueued = false;
-    drawPreview();
-    drawAlign();
+    // only visible views are drawn (hidden ones would lay out against a 0-size box)
+    if (!$('tab-preview').hidden) drawPreview();
+    if (!$('tab-align').hidden) drawAlign();
   });
 }
 
-function fitCanvas(canvas: HTMLCanvasElement, aspect: number) {
+type ViewName = 'preview' | 'align' | 'output';
+const views: Record<ViewName, ViewState> = {
+  preview: new ViewState(1600),
+  align: new ViewState(1600),
+  output: new ViewState(3200),
+};
+const dprNow = () => window.devicePixelRatio || 1;
+
+/** Size the canvas backing store to fill its container (device pixels). */
+function fillCanvas(canvas: HTMLCanvasElement) {
   const wrap = canvas.parentElement!;
-  const maxW = Math.max(50, wrap.clientWidth - 28);
-  const maxH = Math.max(50, wrap.clientHeight - 28);
-  let w = maxW, h = maxW / aspect;
-  if (h > maxH) { h = maxH; w = maxH * aspect; }
-  const dpr = window.devicePixelRatio || 1;
-  canvas.style.width = `${Math.round(w)}px`;
-  canvas.style.height = `${Math.round(h)}px`;
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  return { w: canvas.width, h: canvas.height };
+  const dpr = dprNow();
+  const w = Math.max(50, Math.round(wrap.clientWidth * dpr));
+  const h = Math.max(50, Math.round(wrap.clientHeight * dpr));
+  if (canvas.width !== w) canvas.width = w;
+  if (canvas.height !== h) canvas.height = h;
+  return { w, h };
+}
+
+/** Light drop shadow behind the content rectangle. */
+function contentFrame(ctx: CanvasRenderingContext2D, r: Rect, fill: string) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.shadowColor = 'rgba(0,0,0,.45)';
+  ctx.shadowBlur = 18 * dprNow();
+  ctx.fillStyle = fill;
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.restore();
+}
+
+function updateZoomLabels() {
+  for (const name of Object.keys(views) as ViewName[]) {
+    const el = document.querySelector<HTMLElement>(`.zoom[data-view=${name}] .zoom-label`);
+    if (el) el.textContent = `${Math.round(views[name].percent(dprNow()))}%`;
+  }
 }
 
 function previewMatrix(f: Frame, out: { w: number; h: number }): Affine {
@@ -394,67 +444,103 @@ let viewT = 0.5;
 function drawPreview() {
   const canvas = $<HTMLCanvasElement>('preview-canvas');
   const s = S();
-  const { w, h } = fitCanvas(canvas, s.widthIn / s.heightIn);
+  const { w, h } = fillCanvas(canvas);
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = s.background;
-  ctx.fillRect(0, 0, w, h);
+  ctx.clearRect(0, 0, w, h);
+  const out = outputPixels(s);
+  const r = views.preview.layout(out.w, out.h, w, h);
+  contentFrame(ctx, r, s.background);
+  updateZoomLabels();
   const frames = activeFrames();
   if (!frames.length) {
     ctx.fillStyle = '#888';
-    ctx.font = `${Math.round(h / 18)}px system-ui`;
+    ctx.font = `${Math.round(Math.min(r.h, r.w / 1.5) / 18)}px system-ui`;
     ctx.textAlign = 'center';
-    ctx.fillText('Import two or more images to begin', w / 2, h / 2);
+    ctx.fillText('Drop images or a folder here to begin', r.x + r.w / 2, r.y + r.h / 2);
     return;
   }
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(r.x, r.y, r.w, r.h);
+  ctx.clip();
   const ordered = s.reverse ? [...frames].reverse() : frames;
   const pos = viewT * (ordered.length - 1);
   const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
   const t = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
   const draw = (f: Frame, alpha: number) => {
-    const m = previewMatrix(f, { w, h });
-    // canvas px ← frame px  =  inverse(output → frame)
-    ctx.setTransform(...invert(m));
+    const m = previewMatrix(f, out);
+    // canvas px ← print px ← frame px
+    ctx.setTransform(...compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(m)));
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(f.bitmap, 0, 0);
   };
-  draw(ordered[i0], 1);
-  if (t > 0.001) draw(ordered[i1], t);
-  ctx.globalAlpha = 1;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (s.mode === '3d' && $<HTMLSelectElement>('preview-mode').value === 'anaglyph' && ordered.length > 1) {
+    // left eye sees an earlier frame than the right eye; spacing ≈ a quarter of the sequence
+    const sep = Math.max(1, Math.round((ordered.length - 1) / 4));
+    const li = Math.min(Math.max(0, Math.round(pos - sep / 2)), ordered.length - 1 - sep);
+    const eye = (f: Frame, color: string) => {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const x = c.getContext('2d')!;
+      x.fillStyle = s.background;
+      x.fillRect(r.x, r.y, r.w, r.h);
+      x.setTransform(...compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(previewMatrix(f, out))));
+      x.imageSmoothingQuality = 'high';
+      x.drawImage(f.bitmap, 0, 0);
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.globalCompositeOperation = 'multiply';
+      x.fillStyle = color;
+      x.fillRect(0, 0, w, h);
+      return c;
+    };
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(eye(ordered[li], '#ff0000'), 0, 0);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(eye(ordered[li + sep], '#00ffff'), 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+  } else {
+    draw(ordered[i0], 1);
+    if (t > 0.001) draw(ordered[i1], t);
+  }
+  ctx.restore();
 }
 
 let flickerOn = false;
 let pickingKey = false;
-function alignViewMatrix(f: Frame, sa: number): Affine {
-  // canvas ← ref ← frame  :  canvas = sa · A⁻¹ · B⁻¹
+function alignViewMatrix(f: Frame, r: Rect): Affine {
+  // canvas ← ref ← frame  :  canvas = T(r) · s · A⁻¹ · B⁻¹
   const ref = refFrame()!;
   const R = { w: ref.width, h: ref.height };
-  return compose(scale(sa), invert(alignMap(R, f.transform)), invert(baseMap(R, { w: f.width, h: f.height })));
+  return compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(alignMap(R, f.transform)), invert(baseMap(R, { w: f.width, h: f.height })));
 }
 
 function drawAlign() {
   const canvas = $<HTMLCanvasElement>('align-canvas');
   const ref = refFrame();
   const ctx = canvas.getContext('2d')!;
-  if (!ref) {
-    fitCanvas(canvas, 1.5);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    return;
-  }
-  const { w, h } = fitCanvas(canvas, ref.width / ref.height);
-  const sa = w / ref.width;
-  const sel = selFrame() ?? ref;
-  const mode = $<HTMLSelectElement>('overlay-mode').value;
-  const opacity = +$<HTMLInputElement>('overlay-opacity').value;
+  const { w, h } = fillCanvas(canvas);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
+  ctx.clearRect(0, 0, w, h);
+  if (!ref) {
+    updateZoomLabels();
+    return;
+  }
+  const r = views.align.layout(ref.width, ref.height, w, h);
+  updateZoomLabels();
+  contentFrame(ctx, r, '#000');
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(r.x, r.y, r.w, r.h);
+  ctx.clip();
+  const sel = selFrame() ?? ref;
+  const mode = $<HTMLSelectElement>('overlay-mode').value;
+  const opacity = +$<HTMLInputElement>('overlay-opacity').value;
   const draw = (f: Frame, alpha = 1, op: GlobalCompositeOperation = 'source-over') => {
-    ctx.setTransform(...alignViewMatrix(f, sa));
+    ctx.setTransform(...alignViewMatrix(f, r));
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = op;
     ctx.drawImage(f.bitmap, 0, 0);
@@ -468,7 +554,7 @@ function drawAlign() {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       const x = c.getContext('2d')!;
-      x.setTransform(...alignViewMatrix(f, sa));
+      x.setTransform(...alignViewMatrix(f, r));
       x.drawImage(f.bitmap, 0, 0);
       x.setTransform(1, 0, 0, 1, 0, 0);
       x.globalCompositeOperation = 'multiply';
@@ -481,9 +567,11 @@ function drawAlign() {
     ctx.globalCompositeOperation = 'lighter';
     ctx.drawImage(tmp(sel, '#00ffff'), 0, 0);
   } else { draw(ref); draw(sel, opacity); }
+  ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+  const X = (x: number) => r.x + x * r.s, Y = (y: number) => r.y + y * r.s;
 
   const dpr = window.devicePixelRatio || 1;
   if ($<HTMLInputElement>('show-crop').checked) {
@@ -496,19 +584,19 @@ function drawAlign() {
     ctx.lineWidth = 1.5 * dpr;
     ctx.setLineDash([6 * dpr, 4 * dpr]);
     ctx.beginPath();
-    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * sa, y * sa) : ctx.moveTo(x * sa, y * sa)));
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
     ctx.closePath();
     ctx.stroke();
     ctx.setLineDash([]);
   }
   if (state.keyPoint && S().alignMode === 'keypoint') {
-    const x = state.keyPoint.x * sa, y = state.keyPoint.y * sa, r = 14 * dpr;
+    const x = X(state.keyPoint.x), y = Y(state.keyPoint.y), rad = 14 * dpr;
     ctx.strokeStyle = '#4af2ff';
     ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.moveTo(x - r * 1.6, y); ctx.lineTo(x + r * 1.6, y);
-    ctx.moveTo(x, y - r * 1.6); ctx.lineTo(x, y + r * 1.6);
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.moveTo(x - rad * 1.6, y); ctx.lineTo(x + rad * 1.6, y);
+    ctx.moveTo(x, y - rad * 1.6); ctx.lineTo(x, y + rad * 1.6);
     ctx.stroke();
   }
 }
@@ -516,7 +604,7 @@ function drawAlign() {
 function bindViews() {
   const pc = $<HTMLCanvasElement>('preview-canvas');
   pc.addEventListener('pointermove', (e) => {
-    if (playing) return;
+    if (playing || panning) return;
     const r = pc.getBoundingClientRect();
     viewT = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     $<HTMLInputElement>('view').value = String(viewT);
@@ -527,6 +615,7 @@ function bindViews() {
     scheduleRedraw();
   });
   $('preview-blend').addEventListener('change', scheduleRedraw);
+  $('preview-mode').addEventListener('change', scheduleRedraw);
   $('btn-play').addEventListener('click', togglePlay);
 
   for (const id of ['overlay-mode', 'overlay-opacity', 'show-crop']) $(id).addEventListener('input', scheduleRedraw);
@@ -541,13 +630,12 @@ function bindViews() {
   const ac = $<HTMLCanvasElement>('align-canvas');
   let drag: { x: number; y: number; t: FrameTransform } | null = null;
   const toRef = (e: PointerEvent) => {
-    const ref = refFrame()!;
-    const r = ac.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * ref.width, y: ((e.clientY - r.top) / r.height) * ref.height };
+    const b = ac.getBoundingClientRect();
+    return views.align.toContent((e.clientX - b.left) * dprNow(), (e.clientY - b.top) * dprNow()) ?? { x: 0, y: 0 };
   };
   ac.addEventListener('pointerdown', (e) => {
     const ref = refFrame();
-    if (!ref) return;
+    if (!ref || isPanGesture(e, 'align')) return;
     if (pickingKey) {
       state.keyPoint = toRef(e);
       setPicking(false);
@@ -598,7 +686,113 @@ function bindViews() {
       if (n) { state.selectedId = n.id; renderFrameList(); scheduleRedraw(); }
     }
   });
-  window.addEventListener('resize', scheduleRedraw);
+  window.addEventListener('resize', () => { scheduleRedraw(); if (!$('tab-output').hidden) drawOutput(); });
+}
+
+// ---------------------------------------------------------------------------
+// Zoom & pan (buttons, mouse wheel / trackpad pinch, keyboard, drag)
+// ---------------------------------------------------------------------------
+
+let panning = false;
+let spaceDown = false;
+const canvasOf: Record<ViewName, string> = { preview: 'preview-canvas', align: 'align-canvas', output: 'output-canvas' };
+
+function currentView(): ViewName | null {
+  for (const n of ['preview', 'align', 'output'] as ViewName[]) if (!$(`tab-${n}`).hidden) return n;
+  return null;
+}
+
+function redrawView(name: ViewName) {
+  if (name === 'output') drawOutput();
+  else scheduleRedraw();
+}
+
+/** Middle button, Space+drag, or (outside Align, when zoomed in) a left-drag pans the view. */
+function isPanGesture(e: PointerEvent, name: ViewName) {
+  return e.button === 1 || spaceDown || (name !== 'align' && e.button === 0 && views[name].zoom > 1.001);
+}
+
+const drawNow: Record<ViewName, () => void> = { preview: () => drawPreview(), align: () => drawAlign(), output: () => drawOutput() };
+
+function zoomCommand(name: ViewName, cmd: string) {
+  const v = views[name];
+  drawNow[name](); // refresh layout so zoom math uses the current viewport
+  if (cmd === 'in') v.zoomCentered(1.25, dprNow());
+  else if (cmd === 'out') v.zoomCentered(1 / 1.25, dprNow());
+  else if (cmd === 'fit') v.fit();
+  else if (cmd === 'actual') v.actual(dprNow());
+  redrawView(name);
+}
+
+function bindZoom() {
+  document.querySelectorAll<HTMLElement>('.zoom').forEach((group) => {
+    const name = group.dataset.view as ViewName;
+    group.addEventListener('click', (e) => {
+      const cmd = (e.target as HTMLElement).closest<HTMLElement>('[data-z]')?.dataset.z;
+      if (cmd) zoomCommand(name, cmd);
+    });
+  });
+
+  for (const name of Object.keys(canvasOf) as ViewName[]) {
+    const canvas = $<HTMLCanvasElement>(canvasOf[name]);
+    // wheel / trackpad: zoom around the cursor
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const b = canvas.getBoundingClientRect();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      const k = e.ctrlKey ? 0.01 : 0.0015; // pinch gestures arrive as ctrl+wheel with small deltas
+      const factor = Math.exp(-e.deltaY * unit * k);
+      views[name].zoomAt(factor, (e.clientX - b.left) * dprNow(), (e.clientY - b.top) * dprNow(), dprNow());
+      redrawView(name);
+    }, { passive: false });
+    canvas.addEventListener('dblclick', () => {
+      if (name !== 'align' || spaceDown) zoomCommand(name, views[name].zoom === 1 ? 'actual' : 'fit');
+    });
+    // drag to pan
+    let last: { x: number; y: number } | null = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!isPanGesture(e, name) || (name === 'align' && pickingKey)) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      last = { x: e.clientX, y: e.clientY };
+      panning = true;
+      canvas.classList.add('panning');
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!last) return;
+      views[name].panX += (e.clientX - last.x) * dprNow();
+      views[name].panY += (e.clientY - last.y) * dprNow();
+      last = { x: e.clientX, y: e.clientY };
+      redrawView(name);
+    });
+    const end = () => {
+      last = null;
+      panning = false;
+      canvas.classList.remove('panning');
+    };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('auxclick', (e) => e.preventDefault());
+  }
+
+  const typing = (e: KeyboardEvent) => ['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName);
+  window.addEventListener('keydown', (e) => {
+    if (typing(e)) return;
+    if (e.code === 'Space') {
+      if (!spaceDown) document.body.classList.add('space-pan');
+      spaceDown = true;
+      e.preventDefault();
+      return;
+    }
+    const name = currentView();
+    if (!name || e.metaKey || e.ctrlKey || e.altKey) return;
+    const cmd = { '+': 'in', '=': 'in', '-': 'out', '_': 'out', '0': 'fit', '1': 'actual' }[e.key];
+    if (cmd) { e.preventDefault(); zoomCommand(name, cmd); }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') { spaceDown = false; document.body.classList.remove('space-pan'); }
+  });
+  window.addEventListener('blur', () => { spaceDown = false; document.body.classList.remove('space-pan'); });
 }
 
 let playing = false;
@@ -863,30 +1057,21 @@ function setResult(r: RenderResult) {
 
 function drawOutput() {
   const c = $<HTMLCanvasElement>('output-canvas');
-  if (!result) return;
-  const zoom = $<HTMLSelectElement>('output-zoom').value;
-  const wrap = $('output-wrap');
-  const dpr = window.devicePixelRatio || 1;
-  if (zoom === 'fit') {
-    const s = Math.min((wrap.clientWidth - 28) / result.width, (wrap.clientHeight - 28) / result.height, 1);
-    const w = Math.max(1, Math.round(result.width * s));
-    const h = Math.max(1, Math.round(result.height * s));
-    c.width = Math.round(w * dpr);
-    c.height = Math.round(h * dpr);
-    c.style.width = `${w}px`;
-    c.style.height = `${h}px`;
-    const ctx = c.getContext('2d')!;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(result.canvas, 0, 0, c.width, c.height);
-  } else {
-    // 1:1 (or magnified): show the full-res canvas directly, scaled by CSS
-    const z = +zoom;
-    c.width = result.width;
-    c.height = result.height;
-    c.getContext('2d')!.drawImage(result.canvas, 0, 0);
-    c.style.width = `${(result.width * z) / dpr}px`;
-    c.style.height = `${(result.height * z) / dpr}px`;
+  const { w, h } = fillCanvas(c);
+  const ctx = c.getContext('2d')!;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if (!result) {
+    updateZoomLabels();
+    return;
   }
+  const r = views.output.layout(result.width, result.height, w, h);
+  updateZoomLabels();
+  contentFrame(ctx, r, '#fff');
+  // show individual print dots crisply once they are bigger than a screen pixel
+  ctx.imageSmoothingEnabled = r.s < 1;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(result.canvas, r.x, r.y, r.w, r.h);
 }
 
 async function exportResult() {
@@ -1019,7 +1204,6 @@ function bindChrome() {
   $('btn-pattern').addEventListener('click', () => !busy && generatePattern());
   $('btn-download').addEventListener('click', exportResult);
   $('btn-print').addEventListener('click', () => result && printResult(result).catch((e) => status(e.message, 'error')));
-  $('output-zoom').addEventListener('change', drawOutput);
   const pt = $<HTMLSelectElement>('pattern-type');
   const syncPattern = () => {
     $('pitch-opts').hidden = pt.value !== 'pitch';
@@ -1108,10 +1292,14 @@ if (inArtifactHost()) {
   });
 }
 
+$('app-version').textContent = `v${__APP_VERSION__}`;
+document.title = `Lenticulator ${__APP_VERSION__}`;
+
 fillStaticOptions();
 bindSettings();
 bindManual();
 bindViews();
+bindZoom();
 bindChrome();
 syncForm();
 renderFrameList();
