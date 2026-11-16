@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.9
+- Fix: long frame names no longer push the frame buttons out of view.
+
 ## 0.3.8
 - Fix: the key point could land in the wrong place when picking it switched to the Align tab.
 - Fix: the frame list's scrollbar no longer covers the remove buttons.
