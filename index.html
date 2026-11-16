@@ -363,5 +363,16 @@
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
-  </body>
+    <dialog id="update-dialog" class="dialog" aria-labelledby="update-title">
+    <form method="dialog">
+      <h2 id="update-title">Update available</h2>
+      <p><b id="update-version"></b> <a id="update-notes" target="_blank" rel="noopener noreferrer" title="Open the release page">Release notes</a></p>
+      <div class="dialog-actions">
+        <button class="btn" value="skip" title="Don't remind me about this version">Skip</button>
+        <button class="btn" value="later" title="Remind me next time Lenticulator starts">Later</button>
+        <a id="update-download" class="btn primary" autofocus target="_blank" rel="noopener noreferrer" title="Download the installer for this computer">Download</a>
+      </div>
+    </form>
+  </dialog>
+</body>
 </html>

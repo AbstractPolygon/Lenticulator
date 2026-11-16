@@ -33,6 +33,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 
 - **About** (top bar): version, source link, and licenses for the app, the depth model, libraries and samples.
 - **GPU or CPU rendering** (Settings → Rendering): Auto uses the graphics card through WebGL2 when available and falls back to all CPU cores.
+- **Update check** (desktop): on launch, a popup offers the newest release, with a direct link to the installer for your system.
 - **Settings menu** (top bar): **Panel location** puts the control panel on the left or right. **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
 
 All processing happens locally. Images never leave your computer.

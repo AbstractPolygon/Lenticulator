@@ -41,3 +41,11 @@ The About panel shows the version, a link to the source code, and the licenses o
 | **1** | 100% |
 | Space + drag | Pan |
 | Esc | Close a menu |
+
+## Updates (desktop app)
+
+On launch the desktop app checks GitHub for a newer release. If there is one, a popup shows its version:
+
+- **Download** opens the installer for your system: Windows (x64, arm64 or 32-bit), macOS (Intel or Apple silicon), or Linux (AppImage, or Snap when you installed the Snap).
+- **Release notes** opens the release page.
+- **Later** closes the popup until the next launch. **Skip** hides it until a newer version comes out.

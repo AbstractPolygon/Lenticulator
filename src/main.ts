@@ -1409,6 +1409,23 @@ function loadSampleList() {
     });
 }
 
+// Desktop: check GitHub for a newer release on launch and offer the installer for this OS
+const UPDATE_SKIP_KEY = 'lenticulator.skipVersion';
+window.lenticulatorHost?.checkForUpdate().then((u) => {
+  if (!u) return;
+  try { if (localStorage.getItem(UPDATE_SKIP_KEY) === u.version) return; } catch { /* storage unavailable */ }
+  const dlg = $('update-dialog') as HTMLDialogElement;
+  $('update-version').textContent = `v${u.version}`;
+  ($('update-notes') as HTMLAnchorElement).href = u.notes;
+  const dl = $('update-download') as HTMLAnchorElement;
+  dl.href = u.url;
+  dl.addEventListener('click', () => dlg.close('download'));
+  dlg.addEventListener('close', () => {
+    if (dlg.returnValue === 'skip') try { localStorage.setItem(UPDATE_SKIP_KEY, u.version); } catch { /* ignore */ }
+  }, { once: true });
+  dlg.showModal();
+}, () => { /* offline or rate-limited: try again next launch */ });
+
 const desktopSamples = window.lenticulatorHost?.samples;
 if (!desktopSamples) loadSampleList();
 else {

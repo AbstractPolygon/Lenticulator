@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.16
+- Desktop: checks GitHub for a newer release on launch. The popup's Download button links straight to the
+  installer for your system (Windows x64/arm64/32-bit, macOS Intel/Apple silicon, Linux AppImage or Snap).
+  Skip hides it until the next version; Later asks again on the next launch.
+
 ## 0.3.15
 - New samples: the 3D sets are now full-size Middlebury views (4× the pixels), with four more scenes (Art, Dolls,
   Moebius, Reindeer). New animations: Earth from NASA's EPIC camera, and Muybridge's elephant, cat, elk, camel

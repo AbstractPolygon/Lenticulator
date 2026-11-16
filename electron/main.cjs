@@ -18,6 +18,30 @@ function inside(root, rel) {
   return !r || r.startsWith('..') || path.isAbsolute(r) ? null : file;
 }
 
+// newer release on GitHub? → { version, url (installer for this OS/arch), notes (release page) } or null
+const RELEASES_API = 'https://api.github.com/repos/AbstractPolygon/Lenticulator/releases/latest';
+const newer = (a, b) => {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+};
+function installerName(v) {
+  const arch = process.arch;
+  if (process.platform === 'win32') return `Lenticulator-Setup-${v}-${arch}.exe`;
+  if (process.platform === 'darwin') return `Lenticulator-${v}-mac-${arch}.dmg`;
+  if (process.env.SNAP) return `Lenticulator-${v}-linux-${arch === 'x64' ? 'amd64' : arch}.snap`;
+  return `Lenticulator-${v}-linux-${arch === 'x64' ? 'x86_64' : arch}.AppImage`;
+}
+async function checkForUpdate() {
+  const res = await net.fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const rel = await res.json();
+  const version = String(rel.tag_name || '').replace(/^v/, '');
+  if (!/^\d+\.\d+\.\d+$/.test(version) || !newer(version, app.getVersion())) return null;
+  const asset = (rel.assets || []).find((a) => a.name === installerName(version));
+  return { version, url: asset ? asset.browser_download_url : rel.html_url, notes: rel.html_url };
+}
+
 async function downloadSamples(sender) {
   const get = async (rel) => {
     const res = await net.fetch(SAMPLES_URL + rel);
@@ -105,6 +129,7 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(file).toString());
   });
 
+  ipcMain.handle('update:check', () => checkForUpdate());
   ipcMain.handle('samples:installed', () => fs.existsSync(path.join(samplesDir(), 'index.json')));
   ipcMain.handle('samples:download', (e) => downloadSamples(e.sender));
   ipcMain.handle('samples:remove', () => fs.promises.rm(samplesDir(), { recursive: true, force: true }));

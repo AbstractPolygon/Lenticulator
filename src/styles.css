@@ -256,3 +256,12 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
   .stage { min-height: 70vh; }
 }
+
+/* Update popup (desktop) */
+.dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 20px 22px; width: min(360px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+.dialog::backdrop { background: rgba(0,0,0,.4); }
+.dialog h2 { margin: 0 0 8px; font-size: 16px; }
+.dialog p { margin: 0 0 18px; display: flex; gap: 10px; align-items: baseline; }
+.dialog a:not(.btn) { color: var(--accent); }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dialog-actions .btn { text-decoration: none; }

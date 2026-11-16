@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('lenticulatorHost', {
   isDesktop: true,
   platform: process.platform,
+  checkForUpdate: () => ipcRenderer.invoke('update:check'),
   // sample images are an optional download on desktop (served from app://…/samples/ once installed)
   samples: {
     installed: () => ipcRenderer.invoke('samples:installed'),

@@ -12,6 +12,7 @@ declare module 'gifenc';
 interface LenticulatorHost {
   isDesktop: true;
   platform: string;
+  checkForUpdate(): Promise<{ version: string; url: string; notes: string } | null>;
   samples: {
     installed(): Promise<boolean>;
     download(onProgress: (done: number, total: number) => void): Promise<void>;
