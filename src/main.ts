@@ -117,7 +117,10 @@ function syncForm() {
   document.querySelectorAll<HTMLButtonElement>('#export-format [data-format]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
   num('gif-fps', s.gifFps, 1);
+  $<HTMLSelectElement>('gif-dither').value = s.gifDither;
   $('gif-speed').hidden = s.exportFormat !== 'gif';
+  num('video-loops', s.videoLoops, 0);
+  $('video-loops-row').hidden = s.exportFormat !== 'video';
   $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
   if (s.depthAuto) s.depthFrames = framesForLens(s.lpi, s.dpi);
   num('d-frames', s.depthFrames, 0);
@@ -210,6 +213,8 @@ function bindSettings() {
     syncForm();
     updateExportButtons();
   });
+  on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
+  on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
   on('gif-fps', 'change', (el) => (S().gifFps = Math.max(1, Math.min(50, Math.round(+el.value) || 10))));
   on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
   on('d-frames', 'change', (el) => (S().depthFrames = Math.max(2, Math.min(48, Math.round(+el.value) || 2))));
@@ -1171,11 +1176,11 @@ async function exportAnimation(kind: 'gif' | 'video') {
   status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
   try {
     if (kind === 'gif') {
-      const blob = await encodeGif(drawPlain, w, h, positions, fps, progress);
+      const blob = await encodeGif(drawPlain, w, h, positions, fps, progress, s.gifDither);
       await download(blob, `${base}.gif`);
       status(`Saved ${(blob.size / 1e6).toFixed(1)} MB GIF (${w}×${h}).`);
     } else {
-      const { blob, ext } = await recordVideo(drawTilt, w, h, positions, fps, 2, progress);
+      const { blob, ext } = await recordVideo(drawTilt, w, h, positions, fps, s.videoLoops, progress);
       await download(blob, `${base}.${ext}`);
       status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${ext.toUpperCase()} (${w}×${h}).`);
     }

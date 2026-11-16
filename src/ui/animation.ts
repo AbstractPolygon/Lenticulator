@@ -3,6 +3,8 @@
  * video (MediaRecorder: MP4 where the browser supports it, otherwise WebM).
  */
 
+import { Dither, ditherToPalette } from '../core/dither';
+
 export type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
 /** View positions 0→1→0 for one back-and-forth sweep (no duplicated end points). */
@@ -37,14 +39,13 @@ interface GifEncoderApi {
     bytes(): Uint8Array;
   };
   quantize(rgba: Uint8ClampedArray, max: number): number[][];
-  applyPalette(rgba: Uint8ClampedArray, palette: number[][]): Uint8Array;
 }
 
 export async function encodeGif(
   draw: DrawFn, w: number, h: number, positions: number[], fps: number,
-  onProgress?: (f: number) => void,
+  onProgress?: (f: number) => void, dither: Dither = 'none',
 ): Promise<Blob> {
-  const { GIFEncoder, quantize, applyPalette } = (await import('gifenc')) as unknown as GifEncoderApi;
+  const { GIFEncoder, quantize } = (await import('gifenc')) as unknown as GifEncoderApi;
   const gif = GIFEncoder();
   const { ctx } = canvas(w, h);
   const delay = Math.round(1000 / fps);
@@ -52,7 +53,7 @@ export async function encodeGif(
     draw(ctx, w, h, positions[i]);
     const { data } = ctx.getImageData(0, 0, w, h);
     const palette = quantize(data, 256);
-    gif.writeFrame(applyPalette(data, palette), w, h, { palette, delay });
+    gif.writeFrame(ditherToPalette(data, w, h, palette, dither), w, h, { palette, delay });
     onProgress?.((i + 1) / positions.length);
     if (i % 3 === 0) await tick(); // keep the UI responsive
   }

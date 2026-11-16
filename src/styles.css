@@ -265,4 +265,5 @@ body.space-pan .canvas-wrap canvas { cursor: grab; }
 .dialog a:not(.btn) { color: var(--accent); }
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .dialog-actions .btn { text-decoration: none; }
-#gif-fps { width: 64px; }
+#gif-fps, #video-loops { width: 64px; }
+#gif-dither { width: auto; flex: 1; }

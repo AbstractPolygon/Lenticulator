@@ -31,6 +31,10 @@ export interface Settings {
   exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
   /** GIF playback speed, frames per second */
   gifFps: number;
+  /** GIF colour dithering */
+  gifDither: 'none' | 'floyd' | 'atkinson' | 'bayer';
+  /** video: how many back-and-forth sweeps to record */
+  videoLoops: number;
   /** import each Photoshop layer as a frame */
   psdLayers: boolean;
   /** depth → 3D views */
@@ -68,6 +72,8 @@ export const DEFAULT_SETTINGS: Settings = {
   alignMode: 'keypoint',
   exportFormat: 'png',
   gifFps: 10,
+  gifDither: 'none',
+  videoLoops: 2,
   psdLayers: false,
   depthFrames: 10,
   depthAuto: true,

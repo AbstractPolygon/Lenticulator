@@ -8,7 +8,7 @@ It is free to use for any purpose except building a competing product, under the
 |---|---|
 | **Website** | [abstractpolygon.github.io/Lenticulator](https://abstractpolygon.github.io/Lenticulator/) |
 | **Source** | [github.com/AbstractPolygon/Lenticulator](https://github.com/AbstractPolygon/Lenticulator) |
-| **Version** | [0.3.17](https://github.com/AbstractPolygon/Lenticulator/releases/tag/v0.3.17) |
+| **Version** | [0.3.21 (beta)](https://github.com/AbstractPolygon/Lenticulator/releases/tag/v0.3.21) |
 | **Downloads** | [Releases](https://github.com/AbstractPolygon/Lenticulator/releases) |
 | **License** | [PolyForm Shield 1.0.0](https://polyformproject.org/licenses/shield/1.0.0) |
 

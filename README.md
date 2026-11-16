@@ -28,7 +28,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - *Frame order & phase test:* numbered colour frames that show tilt direction and which frame faces you head-on.
 - **Live preview:** move the mouse across the preview (or press Play) to simulate tilting the print.
 - **Zoom & pan** in Preview, Align and Output: use the −/+/Fit/100% buttons, the mouse wheel or a trackpad pinch (zooms around the cursor), or the keys `+` `-` `0` (fit) `1` (100%). To pan, drag when zoomed in, middle-drag, or hold Space and drag. Output goes up to 3200% so you can inspect individual print dots.
-- **Export** the print as PNG, JPG or TIFF, all tagged with the print DPI, or **Print** directly at exact physical size. Export an animated **GIF** of the aligned frames (one GIF frame per frame, at a speed you set), or a **video** (MP4, or WebM where MP4 isn't available) of the tilt preview, to share. Inside the claude.ai artifact, TIFF downloads as a .zip.
+- **Export** the print as PNG, JPG or TIFF, all tagged with the print DPI, or **Print** directly at exact physical size. Export an animated **GIF** of the aligned frames (one GIF frame per frame, at a speed you set, with optional dithering), or a **video** (MP4, or WebM where MP4 isn't available) of the tilt preview with a loop count you set, to share. Inside the claude.ai artifact, TIFF downloads as a .zip.
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 
 - **About** (top bar): version, source link, and licenses for the app, the depth model, libraries and samples.
