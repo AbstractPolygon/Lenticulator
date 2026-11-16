@@ -88,8 +88,39 @@ jobs:
       - name: Build DMG (Intel and Apple silicon)
         run: npx electron-builder --mac --publish never
         env:
-          # unsigned unless signing certificates are added as secrets (CSC_LINK / CSC_KEY_PASSWORD)
+          # No Developer ID certificate. The app still gets an ad-hoc signature (build/mac-adhoc-sign.cjs), without which
+          # Apple Silicon calls it damaged and refuses to open it.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Check the macOS apps' signatures
+        run: |
+          for app in release/mac*/*.app; do
+            echo "$app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -dv "$app" 2>&1 | grep -E 'Signature=adhoc|Identifier='
+          done
+          # the disk images hold the same signed apps: mount each and check the app inside
+          for dmg in release/*.dmg; do
+            mnt=$(mktemp -d)
+            hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mnt" > /dev/null
+            codesign --verify --deep --strict "$mnt"/*.app && echo "$dmg: app signature valid"
+            hdiutil detach "$mnt" > /dev/null
+          done
+      - name: Run the macOS apps (Apple Silicon, and Intel under Rosetta)
+        run: |
+          softwareupdate --install-rosetta --agree-to-license > /dev/null 2>&1 || true
+          for app in release/mac*/*.app; do
+            bin="$app/Contents/MacOS/$(defaults read "$(pwd)/$app/Contents/Info" CFBundleExecutable)"
+            echo "== $app ($(lipo -archs "$bin"))"
+            # the binary starts (macOS accepts its signature) ...
+            ELECTRON_RUN_AS_NODE=1 "$bin" -e 'console.log("runs as", process.arch)'
+            # ... and the whole app launches and keeps running
+            "$bin" > /tmp/app.log 2>&1 &
+            pid=$!
+            sleep 15
+            if ! kill -0 "$pid" 2>/dev/null; then cat /tmp/app.log; echo "$app exited early"; exit 1; fi
+            kill "$pid"; wait "$pid" 2>/dev/null || true
+            echo "$app launched"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: lenticulator-macos
