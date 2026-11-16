@@ -1,5 +1,5 @@
 name: Desktop builds
-# Builds installers for Linux (AppImage, Snap), Windows (NSIS installer) and macOS (DMG).
+# Builds installers for Linux (AppImage, Snap), Windows (NSIS installer: x64, arm64, 32-bit) and macOS (DMG).
 # - Manual run (Actions → Desktop builds → Run workflow): installers are attached to the run as artifacts.
 #   Tick "publish" to also publish them as the public GitHub release v<package.json version>
 #   (the release and its tag are created on GitHub for the commit that was built).
@@ -59,6 +59,23 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
 
+  # Electron dropped 32-bit Windows after version 43, so this installer is built with the last 43.x release.
+  windows-ia32:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Build 32-bit NSIS installer (Electron 43)
+        run: npx electron-builder --win nsis --ia32 --publish never -c.electronVersion=43.8.6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lenticulator-windows-ia32
+          path: release/*.exe
+          if-no-files-found: error
+
   macos:
     runs-on: macos-latest
     steps:
@@ -82,7 +99,7 @@ jobs:
   # release, and never uploads anywhere but GitHub releases).
   release:
     if: startsWith(github.ref, 'refs/tags/') || inputs.publish
-    needs: [linux, windows, macos]
+    needs: [linux, windows, windows-ia32, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
