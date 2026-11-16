@@ -1,7 +1,7 @@
 {
   "name": "lenticulator",
   "productName": "Lenticulator",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Create interlaced images for lenticular prints - in the browser or on the desktop.",
   "license": "SEE LICENSE IN LICENSE",
   "author": "AbstractPolygon",

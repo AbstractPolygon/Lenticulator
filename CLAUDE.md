@@ -18,6 +18,7 @@ The page declares the `downloads` capability (saves go through the host's save p
   parenthetical explanations in labels or dropdown options (e.g. "Vertical", not "Vertical (flip L/R, 3D)").
 - **No labels where the control is self-explanatory** (e.g. a slider next to Play, a dropdown whose options
   name themselves). Use `aria-label` for accessibility instead of visible text.
+- Explanations belong in tooltips (`title`); every control should have one.
 - Keep labels short. Short warnings (⚠) and status messages are fine; explanations go in the README.
 
 ## Conventions

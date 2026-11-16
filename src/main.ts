@@ -1696,6 +1696,12 @@ $<HTMLInputElement>('depth-input').addEventListener('change', (e) => {
 });
 $('btn-depth-generate').addEventListener('click', () => generateFromDepth());
 
+// labels show their control's tooltip too, so hovering the label text works
+document.querySelectorAll<HTMLLabelElement>('label').forEach((l) => {
+  const c = l.querySelector<HTMLElement>('[title]');
+  if (c && !l.title) l.title = c.title;
+});
+
 fillStaticOptions();
 bindSettings();
 bindManual();

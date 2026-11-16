@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.7
+- Tooltips on all controls.
+- Logo: solid colour (no gradient), strips centred.
+
 ## 0.3.6
 - Top-bar icon buttons spaced closer together.
 

@@ -80,7 +80,7 @@
             <section class="menu-section">
               <div class="menu-heading">Appearance</div>
               <label>Theme
-                <select id="theme">
+                <select id="theme" title="Colour theme. System follows your OS light/dark setting">
                   <option value="system">System</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -88,7 +88,7 @@
                 </select>
               </label>
               <label>Panel location
-                <select id="panel-side">
+                <select id="panel-side" title="Which side of the window the control panel is on">
                   <option value="left">Left</option>
                   <option value="right">Right</option>
                 </select>
@@ -97,13 +97,13 @@
             <section class="menu-section">
               <div class="menu-heading">Import</div>
               <label>Photoshop (PSD) files
-                <select id="psd-import">
+                <select id="psd-import" title="Import a Photoshop file as one flattened image, or one frame per layer">
                   <option value="flat">Flattened image</option>
                   <option value="layers">Each layer as a frame</option>
                 </select>
               </label>
               <label>Multi-page TIFF files
-                <select id="tiff-import">
+                <select id="tiff-import" title="Import every page of a multi-page TIFF as frames, or only the first page">
                   <option value="all">Every page as a frame</option>
                   <option value="first">First page only</option>
                 </select>
@@ -121,39 +121,39 @@
         <details open class="panel">
           <summary>Print &amp; lens</summary>
           <div class="segmented" role="radiogroup" aria-label="Effect">
-            <button type="button" role="radio" data-mode="3d" aria-checked="true">
+            <button type="button" role="radio" data-mode="3d" title="Depth: frames are views from left to right" aria-checked="true">
               <strong>3D</strong>
             </button>
-            <button type="button" role="radio" data-mode="animation" aria-checked="false">
+            <button type="button" role="radio" data-mode="animation" title="Motion or flip: frames play as the print is tilted" aria-checked="false">
               <strong>Animation</strong>
             </button>
           </div>
           <div class="grid2">
             <label class="full">Size preset
-              <select id="size-preset"></select>
+              <select id="size-preset" title="Common print sizes. Keeps the current portrait/landscape orientation"></select>
             </label>
-            <label>Width <input id="width" type="number" min="0.1" step="0.01" /></label>
-            <label>Height <input id="height" type="number" min="0.1" step="0.01" /></label>
+            <label>Width <input id="width" title="Print width (without margins)" type="number" min="0.1" step="0.01" /></label>
+            <label>Height <input id="height" title="Print height (without margins)" type="number" min="0.1" step="0.01" /></label>
             <label>Units
-              <select id="units"><option value="in">inches</option><option value="mm">mm</option></select>
+              <select id="units" title="Units for sizes and margin"><option value="in">inches</option><option value="mm">mm</option></select>
             </label>
-            <label>Print DPI <input id="dpi" type="number" min="72" max="4800" step="1" list="dpi-list" /></label>
-            <label>Lens LPI <input id="lpi" type="number" min="1" max="400" step="0.001" list="lpi-list" /></label>
+            <label>Print DPI <input id="dpi" title="Printer resolution in dots per inch. Use your printer&#x27;s native resolution (e.g. 600/1200 Canon/HP, 720/1440 Epson)" type="number" min="72" max="4800" step="1" list="dpi-list" /></label>
+            <label>Lens LPI <input id="lpi" title="Lenses per inch of your lenticular sheet. Use the value found with the pitch test for best results" type="number" min="1" max="400" step="0.001" list="lpi-list" /></label>
             <label>Lens direction
-              <select id="orientation">
+              <select id="orientation" title="Direction the lenses run. Vertical: tilt left/right (needed for 3D). Horizontal: tilt up/down (best for animation)">
                 <option value="vertical">Vertical</option>
                 <option value="horizontal">Horizontal</option>
               </select>
             </label>
             <label>Sampling
-              <select id="sampling">
+              <select id="sampling" title="Blend: anti-aliased strips (exact for any DPI/LPI). Nearest: crisp whole-dot strips">
                 <option value="blend">Blend</option>
                 <option value="nearest">Nearest</option>
               </select>
             </label>
-            <label class="check"><input id="reverse" type="checkbox" /> Reverse frame order</label>
+            <label class="check"><input id="reverse" title="Flip the frame order if the print moves the wrong way when tilted" type="checkbox" /> Reverse frame order</label>
             <label class="full">Strip phase <span class="val" id="phase-val"></span>
-              <input id="phase" type="range" min="0" max="1" step="0.01" />
+              <input id="phase" title="Shifts the strips under the lenses; changes which frame is seen head-on" type="range" min="0" max="1" step="0.01" />
             </label>
           </div>
           <div id="lens-info" class="info"></div>
@@ -169,8 +169,8 @@
           </div>
           <ol id="frame-list" class="frame-list"></ol>
           <div class="row">
-            <button id="btn-reverse-order" class="btn small">Reverse order</button>
-            <button id="btn-clear" class="btn small danger">Remove all</button>
+            <button id="btn-reverse-order" title="Reverse the order of all frames" class="btn small">Reverse order</button>
+            <button id="btn-clear" title="Remove all frames (click twice)" class="btn small danger">Remove all</button>
           </div>
         </details>
 
@@ -179,23 +179,23 @@
           <summary>Depth</summary>
           <canvas id="depth-thumb" class="depth-thumb" width="300" height="200" hidden></canvas>
           <div class="row">
-            <button id="btn-depth-estimate" class="btn small primary">Estimate depth</button>
-            <button id="btn-depth-load" class="btn small">Load depth map</button>
+            <button id="btn-depth-estimate" title="Estimate a depth map for the selected photo with an on-device AI model" class="btn small primary">Estimate depth</button>
+            <button id="btn-depth-load" title="Use your own depth map image (white = near)" class="btn small">Load depth map</button>
             <input id="depth-input" type="file" accept="image/*,.tif,.tiff,.psd,.heic" hidden />
           </div>
           <div class="grid2">
-            <label>Frames <input id="d-frames" type="number" min="2" max="48" step="1" /></label>
-            <label class="check"><input id="d-auto" type="checkbox" /> Match LPI</label>
+            <label>Frames <input id="d-frames" title="Number of views to generate from the photo" type="number" min="2" max="48" step="1" /></label>
+            <label class="check"><input id="d-auto" title="Set the number of frames to DPI ÷ LPI (one view per printed dot under each lens)" type="checkbox" /> Match LPI</label>
             <label class="full">Depth <span class="val" id="d-amount-val"></span>
-              <input id="d-amount" type="range" min="0" max="10" step="0.1" />
+              <input id="d-amount" title="Strength of the 3D effect: total parallax as a percentage of the image width" type="range" min="0" max="10" step="0.1" />
             </label>
             <label class="full">Focus
-              <input id="d-focus" type="range" min="0" max="1" step="0.01" />
+              <input id="d-focus" title="Depth that sits at the print surface (yellow line on the depth preview). Nearer things float in front, farther things sit behind" type="range" min="0" max="1" step="0.01" />
             </label>
-            <label class="check"><input id="d-invert" type="checkbox" /> Invert</label>
+            <label class="check"><input id="d-invert" title="Use for depth maps where white means far" type="checkbox" /> Invert</label>
           </div>
           <div class="row">
-            <button id="btn-depth-generate" class="btn small primary" disabled>Generate frames</button>
+            <button id="btn-depth-generate" title="Replace the frames with views generated from the photo and its depth" class="btn small primary" disabled>Generate frames</button>
           </div>
         </details>
 
@@ -203,24 +203,24 @@
         <details open class="panel">
           <summary>Alignment</summary>
           <label>Method
-            <select id="align-mode">
+            <select id="align-mode" title="Shift + rotate + scale: hand-held shots. Shift only: tripod or animation. Key point: line every frame up on one subject (3D)">
               <option value="similarity">Shift + rotate + scale</option>
               <option value="translation">Shift only</option>
               <option value="keypoint">Key point</option>
             </select>
           </label>
           <div class="row">
-            <button id="btn-pick-key" class="btn small" aria-pressed="false">Pick key point</button>
-            <button id="btn-auto-align" class="btn small primary">Auto-align</button>
-            <button id="btn-reset-align" class="btn small">Reset</button>
+            <button id="btn-pick-key" title="Click the subject that should sit at the print surface" class="btn small" aria-pressed="false">Pick key point</button>
+            <button id="btn-auto-align" title="Align all frames to the reference frame (★)" class="btn small primary">Auto-align</button>
+            <button id="btn-reset-align" title="Clear the alignment of all frames" class="btn small">Reset</button>
           </div>
           <fieldset id="manual-align" class="manual">
             <legend>Selected frame <span id="sel-name"></span></legend>
             <div class="grid4">
-              <label>X px <input id="t-dx" type="number" step="0.1" /></label>
-              <label>Y px <input id="t-dy" type="number" step="0.1" /></label>
-              <label>Rotate ° <input id="t-rot" type="number" step="0.05" /></label>
-              <label>Scale <input id="t-scale" type="number" step="0.001" min="0.2" max="5" /></label>
+              <label>X px <input id="t-dx" title="Horizontal offset of the selected frame (arrow keys nudge, Shift = ×10)" type="number" step="0.1" /></label>
+              <label>Y px <input id="t-dy" title="Vertical offset of the selected frame" type="number" step="0.1" /></label>
+              <label>Rotate ° <input id="t-rot" title="Rotation of the selected frame in degrees" type="number" step="0.05" /></label>
+              <label>Scale <input id="t-scale" title="Scale of the selected frame" type="number" step="0.001" min="0.2" max="5" /></label>
             </div>
           </fieldset>
         </details>
@@ -230,18 +230,18 @@
           <summary>Framing &amp; page</summary>
           <div class="grid2">
             <label>Fit
-              <select id="fit"><option value="cover">Fill</option><option value="contain">Fit</option></select>
+              <select id="fit" title="Fill: crop to fill the print. Fit: show the whole image with borders"><option value="cover">Fill</option><option value="contain">Fit</option></select>
             </label>
-            <label>Background <input id="bg" type="color" /></label>
+            <label>Background <input id="bg" title="Colour used where an image doesn&#x27;t cover the print" type="color" /></label>
             <label class="full">Zoom <span class="val" id="zoom-val"></span>
-              <input id="zoom" type="range" min="1" max="3" step="0.01" />
+              <input id="zoom" title="Enlarge the image within the print area" type="range" min="1" max="3" step="0.01" />
             </label>
-            <label class="full">Pan X <input id="panX" type="range" min="-0.5" max="0.5" step="0.005" /></label>
-            <label class="full">Pan Y <input id="panY" type="range" min="-0.5" max="0.5" step="0.005" /></label>
-            <label>Margin <input id="margin" type="number" min="0" step="0.05" /></label>
+            <label class="full">Pan X <input id="panX" title="Move the image left/right within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label class="full">Pan Y <input id="panY" title="Move the image up/down within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label>Margin <input id="margin" title="White border around the image, for alignment bars and crop marks" type="number" min="0" step="0.05" /></label>
             <span></span>
-            <label class="check"><input id="alignBars" type="checkbox" /> Lens alignment bars</label>
-            <label class="check"><input id="cropMarks" type="checkbox" /> Crop marks</label>
+            <label class="check"><input id="alignBars" title="Strips in the margin printed at the lens pitch. Rotate the lens sheet until they look uniform to line it up" type="checkbox" /> Lens alignment bars</label>
+            <label class="check"><input id="cropMarks" title="Corner marks showing where to cut" type="checkbox" /> Crop marks</label>
           </div>
         </details>
 
@@ -249,39 +249,39 @@
         <details class="panel">
           <summary>Test patterns</summary>
           <label>Pattern
-            <select id="pattern-type">
+            <select id="pattern-type" title="Pitch test: find your true LPI. Lens ruler: check printer scaling. Frame order: check tilt direction and phase">
               <option value="pitch">Pitch test</option>
               <option value="ruler">Lens ruler</option>
               <option value="frames">Frame order</option>
             </select>
           </label>
           <div class="grid2" id="pitch-opts">
-            <label>± range (LPI) <input id="pt-range" type="number" min="0.05" step="0.05" value="1" /></label>
-            <label>Step <input id="pt-step" type="number" min="0.01" step="0.01" value="0.1" /></label>
+            <label>± range (LPI) <input id="pt-range" title="How far above and below the current LPI to test" type="number" min="0.05" step="0.05" value="1" /></label>
+            <label>Step <input id="pt-step" title="LPI difference between neighbouring test bands" type="number" min="0.01" step="0.01" value="0.1" /></label>
           </div>
           <div class="grid2" id="frames-opts" hidden>
-            <label>Test frames <input id="ft-count" type="number" min="2" max="64" step="1" value="6" /></label>
+            <label>Test frames <input id="ft-count" title="Number of numbered colour frames in the test" type="number" min="2" max="64" step="1" value="6" /></label>
           </div>
-          <button id="btn-pattern" class="btn small primary">Generate test pattern</button>
+          <button id="btn-pattern" title="Generate the selected test pattern at the current size, DPI and LPI" class="btn small primary">Generate test pattern</button>
         </details>
 
         <!-- EXPORT -->
         <details open class="panel">
           <summary>Render &amp; export</summary>
           <div class="row">
-            <button id="btn-render" class="btn primary">Render interlaced image</button>
+            <button id="btn-render" title="Interlace the frames at full print resolution" class="btn primary">Render interlaced image</button>
           </div>
           <div class="progress" hidden><div id="progress-bar"></div></div>
           <div class="row">
             <div id="export-format" class="seg" role="radiogroup" aria-label="Export format">
-              <button type="button" role="radio" data-format="png">PNG</button>
-              <button type="button" role="radio" data-format="jpg">JPG</button>
-              <button type="button" role="radio" data-format="tiff">TIF</button>
-              <button type="button" role="radio" data-format="gif">GIF</button>
-              <button type="button" role="radio" data-format="video">Video</button>
+              <button type="button" role="radio" data-format="png" title="Rendered print as PNG (lossless, DPI tagged)">PNG</button>
+              <button type="button" role="radio" data-format="jpg" title="Rendered print as JPG (DPI tagged)">JPG</button>
+              <button type="button" role="radio" data-format="tiff" title="Rendered print as uncompressed TIFF (DPI tagged)">TIF</button>
+              <button type="button" role="radio" data-format="gif" title="Animated GIF of the tilt preview">GIF</button>
+              <button type="button" role="radio" data-format="video" title="Video of the tilt preview">Video</button>
             </div>
-            <button id="btn-download" class="btn small" disabled>Download</button>
-            <button id="btn-print" class="btn small" disabled>Print…</button>
+            <button id="btn-download" title="Save the selected format" class="btn small" disabled>Download</button>
+            <button id="btn-print" title="Print at exact size. Turn off printer scaling and borderless expansion" class="btn small" disabled>Print…</button>
           </div>
         </details>
       </aside>
@@ -289,9 +289,9 @@
       <main class="stage">
         <div class="tabbar">
           <nav class="tabs" role="tablist">
-            <button role="tab" data-tab="align">Align</button>
-            <button role="tab" data-tab="preview" aria-selected="true">Preview</button>
-            <button role="tab" data-tab="output">Output</button>
+            <button role="tab" data-tab="align" title="Line frames up (drag, Space+drag or middle-drag to pan)">Align</button>
+            <button role="tab" data-tab="preview" title="Simulated tilt of the finished print" aria-selected="true">Preview</button>
+            <button role="tab" data-tab="output" title="The rendered, interlaced print">Output</button>
           </nav>
           <div class="zoom" id="zoom-controls" role="group" aria-label="Zoom">
               <button class="btn small" data-z="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
@@ -304,10 +304,10 @@
         <section id="tab-preview" class="tab-pane" role="tabpanel">
           <div class="canvas-wrap"><canvas id="preview-canvas"></canvas></div>
           <div class="toolbar">
-            <button id="btn-play" class="btn small">▶ Play</button>
-            <input id="view" class="grow" type="range" min="0" max="1" step="0.001" value="0.5" aria-label="View angle" />
-            <label class="check"><input id="preview-blend" type="checkbox" checked /> Smooth</label>
-              <select id="preview-mode" aria-label="Preview mode">
+            <button id="btn-play" title="Animate the tilt" class="btn small">▶ Play</button>
+            <input id="view" title="Viewing angle. You can also move the mouse over the preview" class="grow" type="range" min="0" max="1" step="0.001" value="0.5" aria-label="View angle" />
+            <label class="check"><input id="preview-blend" title="Blend between neighbouring frames while tilting" type="checkbox" checked /> Smooth</label>
+              <select id="preview-mode" title="Tilt preview, or compare the current view with the reference frame (onion skin, difference, flicker, anaglyph)" aria-label="Preview mode">
                 <option value="tilt">Tilt</option>
                 <option value="onion">Onion skin</option>
                 <option value="difference">Difference</option>
@@ -320,15 +320,15 @@
         <section id="tab-align" class="tab-pane" role="tabpanel" hidden>
           <div class="canvas-wrap"><canvas id="align-canvas"></canvas></div>
           <div class="toolbar">
-              <select id="overlay-mode" aria-label="Overlay">
+              <select id="overlay-mode" title="How the selected frame is compared with the reference frame (★)" aria-label="Overlay">
                 <option value="onion">Onion skin</option>
                 <option value="difference">Difference</option>
                 <option value="flicker">Flicker</option>
                 <option value="frame">Selected only</option>
                 <option value="anaglyph">Anaglyph</option>
               </select>
-            <label class="grow">Opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.01" value="0.5" /></label>
-            <label class="check"><input id="show-crop" type="checkbox" checked /> Show print area</label>
+            <label class="grow">Opacity <input id="overlay-opacity" title="Opacity of the selected frame in onion-skin mode" type="range" min="0" max="1" step="0.01" value="0.5" /></label>
+            <label class="check"><input id="show-crop" title="Outline the area that will be printed" type="checkbox" checked /> Show print area</label>
           </div>
         </section>
 
