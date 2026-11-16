@@ -69,7 +69,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Build 32-bit NSIS installer (Electron 43)
-        run: npx electron-builder --win nsis --ia32 --publish never -c.electronVersion=43.8.6
+        shell: bash
+        run: npx electron-builder --win nsis --ia32 --publish never --config.electronVersion=43.8.6
       - uses: actions/upload-artifact@v4
         with:
           name: lenticulator-windows-ia32
