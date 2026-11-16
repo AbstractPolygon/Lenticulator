@@ -1,4 +1,4 @@
-import { encodeTiff, setJpegDpi, setPngDpi } from '../core/fileformats';
+import { encodePdf, encodeTiff, setJpegDpi, setPngDpi } from '../core/fileformats';
 import { encodeCanvas } from './canvas';
 
 export interface RenderResult {
@@ -58,10 +58,16 @@ export async function toJpeg(r: RenderResult, quality = 0.95): Promise<Blob> {
   return new Blob([setJpegDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi) as BlobPart], { type: 'image/jpeg' });
 }
 
-export function toTiff(r: RenderResult): Blob {
+export function toTiff(r: RenderResult, cmyk = false): Blob {
   // read the pixels back from the canvas only for this export (no second copy kept around)
   const rgba = r.canvas.getContext('2d')!.getImageData(0, 0, r.width, r.height).data;
-  return new Blob([encodeTiff(rgba, r.width, r.height, r.dpi) as BlobPart], { type: 'image/tiff' });
+  return new Blob([encodeTiff(rgba, r.width, r.height, r.dpi, cmyk) as BlobPart], { type: 'image/tiff' });
+}
+
+/** One-page PDF at exact print size (the print embedded as a high-quality JPEG). */
+export async function toPdf(r: RenderResult): Promise<Blob> {
+  const jpg = new Uint8Array(await (await encodeCanvas(r.canvas, 'image/jpeg', 0.97)).arrayBuffer());
+  return new Blob([encodePdf(jpg, r.width, r.height, r.dpi) as BlobPart], { type: 'application/pdf' });
 }
 
 /**

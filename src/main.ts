@@ -13,7 +13,7 @@ import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, splitMu
 import { decodeSpecial, sniffBlob } from './ui/decoders';
 import { Rect, ViewState } from './ui/view';
 import type { WorkerResponse } from './worker';
-import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
+import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPdf, toPng, toTiff } from './ui/export';
 import { zipStore } from './core/fileformats';
 import { scanProfiles, splitScan } from './core/split';
 import { frameSequence } from './core/timing';
@@ -125,6 +125,8 @@ function syncForm() {
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
   num('gif-fps', s.gifFps, 1);
   $<HTMLSelectElement>('gif-dither').value = s.gifDither;
+  $('tiff-color-row').hidden = s.exportFormat !== 'tiff';
+  $<HTMLSelectElement>('tiff-color').value = s.tiffCmyk ? 'cmyk' : 'rgb';
   $<HTMLSelectElement>('gif-loop').value = s.gifLoop;
   num('gif-hold', s.gifHold, 0);
   // fps, loop and hold apply to GIFs and to frame videos; dithering only to GIFs
@@ -249,6 +251,7 @@ function bindSettings() {
   on('video-loops', 'change', (el) => (S().videoLoops = Math.max(1, Math.min(20, Math.round(+el.value) || 2))));
   on('video-source', 'change', (el) => (S().videoSource = el.value as Settings['videoSource']));
   on('inbetween', 'change', (el) => (S().inBetween = Math.max(0, Math.min(4, Math.round(+el.value) || 0))));
+  on('tiff-color', 'change', (el) => (S().tiffCmyk = el.value === 'cmyk'));
   on('gif-loop', 'change', (el) => (S().gifLoop = el.value as Settings['gifLoop']));
   on('gif-hold', 'change', (el) => (S().gifHold = Math.max(0, Math.min(2000, Math.round(+el.value) || 0))));
   on('gif-dither', 'change', (el) => (S().gifDither = el.value as Settings['gifDither']));
@@ -1411,7 +1414,8 @@ async function exportResult() {
     status('Encoding…', 'info', 30000);
     const fmt = S().exportFormat;
     const ext = fmt === 'tiff' ? 'tif' : fmt;
-    let blob = fmt === 'tiff' ? toTiff(result) : fmt === 'jpg' ? await toJpeg(result) : await toPng(result);
+    let blob = fmt === 'tiff' ? toTiff(result, S().tiffCmyk) : fmt === 'pdf' ? await toPdf(result)
+      : fmt === 'jpg' ? await toJpeg(result) : await toPng(result);
     let name = `${result.fileBase}.${ext}`;
     if (fmt === 'tiff' && inArtifactHost()) {
       // the artifact viewer can't save .tif files directly, so deliver it inside a zip

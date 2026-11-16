@@ -5,7 +5,7 @@ import { alignFrame, matchPoint, phaseCorrelate, similarityToParams } from '../s
 import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
 import { apply, cropToCommon, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
 import { maxDepthPercent } from '../src/core/depth3d';
-import { crc32, encodeTiff, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
+import { crc32, encodePdf, encodeTiff, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
 
 /** Read the DPI from a JPEG's JFIF header (or null). */
 function getJpegDpi(jpg: Uint8Array): number | null {
@@ -362,5 +362,30 @@ describe('maxDepthPercent', () => {
     // 10 frames at 60 LPI = 1/6 in of parallax; on a 6 in wide print that is 2.78 %
     expect(maxDepthPercent(10, 60, 6)).toBeCloseTo(2.78, 2);
     expect(maxDepthPercent(20, 60, 6)).toBeCloseTo(5.56, 2);
+  });
+});
+
+describe('print-shop formats', () => {
+  it('writes a CMYK TIFF', () => {
+    const rgba = new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255, 255, 0, 128, 255, 255]);
+    const t = encodeTiff(rgba, 2, 2, 300, true);
+    const dv = new DataView(t.buffer);
+    const n = dv.getUint16(8, true);
+    const tag = (id: number) => { for (let i = 0; i < n; i++) if (dv.getUint16(10 + i * 12, true) === id) return dv.getUint16(10 + i * 12 + 8, true); return -1; };
+    expect(tag(262)).toBe(5); // Separated
+    expect(tag(277)).toBe(4);
+    const off = dv.getUint32(10 + 5 * 12 + 8, true); // StripOffsets
+    expect(Array.from(t.slice(off, off + 16))).toEqual([0, 255, 255, 0, 0, 0, 0, 255, 0, 0, 0, 0, 255, 127, 0, 0]);
+  });
+  it('writes a PDF with the page at print size and a valid xref', () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 1, 2, 3, 0xff, 0xd9]);
+    const pdf = encodePdf(jpeg, 1800, 1200, 300);
+    const text = new TextDecoder('latin1').decode(pdf);
+    expect(text.startsWith('%PDF-1.4')).toBe(true);
+    expect(text).toContain('/MediaBox [0 0 432 288]'); // 6 × 4 in
+    const startxref = +text.match(/startxref\n(\d+)/)![1];
+    expect(text.slice(startxref, startxref + 4)).toBe('xref');
+    const offs = [...text.slice(startxref).matchAll(/(\d{10}) 00000 n/g)].map((m) => +m[1]);
+    offs.forEach((o, i) => expect(text.slice(o, o + 7)).toBe(`${i + 1} 0 obj`));
   });
 });

@@ -299,10 +299,17 @@
             <div id="export-format" class="seg" role="radiogroup" aria-label="Export format">
               <button type="button" role="radio" data-format="png" title="Rendered print as PNG (lossless, DPI tagged)">PNG</button>
               <button type="button" role="radio" data-format="jpg" title="Rendered print as JPG (DPI tagged)">JPG</button>
-              <button type="button" role="radio" data-format="tiff" title="Rendered print as uncompressed TIFF (DPI tagged)">TIF</button>
+              <button type="button" role="radio" data-format="tiff" title="Rendered print as uncompressed TIFF (DPI tagged), RGB or CMYK">TIF</button>
+              <button type="button" role="radio" data-format="pdf" title="Rendered print as a PDF whose page is exactly the print size, for print shops">PDF</button>
               <button type="button" role="radio" data-format="gif" title="Animated GIF of the aligned frames, one GIF frame per frame. Animations loop; 3D views rock back and forth">GIF</button>
               <button type="button" role="radio" data-format="video" title="Video of the tilt preview">Video</button>
             </div>
+          </div>
+          <div class="row" id="tiff-color-row" hidden>
+            <select id="tiff-color" aria-label="TIFF colour" title="RGB for home printers. CMYK for print shops that ask for it (a simple conversion: they may apply their own colour profile)">
+              <option value="rgb">RGB</option>
+              <option value="cmyk">CMYK</option>
+            </select>
           </div>
           <div class="row" id="gif-speed" hidden>
             <label class="check"><input id="gif-fps" aria-label="GIF frames per second" title="GIF speed in frames per second (1–50)" type="number" min="1" max="50" step="1" value="10" /> fps</label>

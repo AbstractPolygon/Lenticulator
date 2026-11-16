@@ -30,7 +30,9 @@ export interface Settings {
   autoCrop: boolean;
   alignMode: AlignMode;
   /** png/jpg/tiff export the rendered print; gif/video export an animated tilt preview */
-  exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
+  exportFormat: 'png' | 'jpg' | 'tiff' | 'pdf' | 'gif' | 'video';
+  /** TIFF export in CMYK (for print shops) instead of RGB */
+  tiffCmyk: boolean;
   /** GIF playback speed, frames per second */
   gifFps: number;
   /** GIF colour dithering */
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoCrop: true,
   alignMode: 'keypoint',
   exportFormat: 'png',
+  tiffCmyk: false,
   gifFps: 10,
   gifDither: 'atkinson',
   gifLoop: 'pingpong',

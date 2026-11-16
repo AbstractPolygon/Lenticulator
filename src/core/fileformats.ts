@@ -69,31 +69,46 @@ export function getPngDpi(png: Uint8Array): number | null {
  * Encode RGBA pixels as an uncompressed 8-bit RGB baseline TIFF with
  * resolution tags (inches).
  */
-export function encodeTiff(rgba: Uint8ClampedArray | Uint8Array, width: number, height: number, dpi: number): Uint8Array {
-  const pixelBytes = width * height * 3;
+/** RGB → CMYK (simple, device-independent: K from the darkest channel; for print shops that convert with their own profile). */
+export function rgbToCmyk(r: number, g: number, b: number): [number, number, number, number] {
+  const k = 255 - Math.max(r, g, b);
+  if (k >= 255) return [0, 0, 0, 255];
+  const d = 255 - k;
+  return [Math.round(((d - r) / d) * 255), Math.round(((d - g) / d) * 255), Math.round(((d - b) / d) * 255), k];
+}
+
+/**
+ * Uncompressed baseline TIFF (8 bits per sample) with the given DPI: RGB, or CMYK (Photometric = Separated).
+ */
+export function encodeTiff(
+  rgba: Uint8ClampedArray | Uint8Array, width: number, height: number, dpi: number, cmyk = false,
+): Uint8Array {
+  const spp = cmyk ? 4 : 3;
+  const pixelBytes = width * height * spp;
   const entries: [number, number, number, number][] = []; // tag, type, count, value/offset
   const SHORT = 3, LONG = 4, RATIONAL = 5;
   const headerSize = 8;
-  const nTags = 12;
+  const nTags = cmyk ? 13 : 12;
   const ifdSize = 2 + nTags * 12 + 4;
   const extraStart = headerSize + ifdSize;
-  // extra data: BitsPerSample (3 shorts = 6 bytes), XRes (8), YRes (8)
+  // extra data: BitsPerSample (one short per sample), XRes (8), YRes (8), each word aligned
   const bpsOff = extraStart;
-  const xresOff = bpsOff + 6 + 2; // keep word aligned
+  const xresOff = bpsOff + 8;
   const yresOff = xresOff + 8;
   const dataOff = yresOff + 8;
   entries.push([256, LONG, 1, width]); // ImageWidth
   entries.push([257, LONG, 1, height]); // ImageLength
-  entries.push([258, SHORT, 3, bpsOff]); // BitsPerSample
+  entries.push([258, SHORT, spp, bpsOff]); // BitsPerSample
   entries.push([259, SHORT, 1, 1]); // Compression: none
-  entries.push([262, SHORT, 1, 2]); // Photometric: RGB
+  entries.push([262, SHORT, 1, cmyk ? 5 : 2]); // Photometric: Separated (CMYK) or RGB
   entries.push([273, LONG, 1, dataOff]); // StripOffsets
-  entries.push([277, SHORT, 1, 3]); // SamplesPerPixel
+  entries.push([277, SHORT, 1, spp]); // SamplesPerPixel
   entries.push([278, LONG, 1, height]); // RowsPerStrip
   entries.push([279, LONG, 1, pixelBytes]); // StripByteCounts
   entries.push([282, RATIONAL, 1, xresOff]); // XResolution
   entries.push([283, RATIONAL, 1, yresOff]); // YResolution
   entries.push([296, SHORT, 1, 2]); // ResolutionUnit: inch
+  if (cmyk) entries.push([332, SHORT, 1, 1]); // InkSet: CMYK
   const out = new Uint8Array(dataOff + pixelBytes);
   const dv = new DataView(out.buffer);
   out[0] = 0x49; out[1] = 0x49; // "II" little endian
@@ -109,14 +124,52 @@ export function encodeTiff(rgba: Uint8ClampedArray | Uint8Array, width: number, 
     else dv.setUint32(o + 8, value, true);
   });
   dv.setUint32(headerSize + 2 + nTags * 12, 0, true); // next IFD
-  dv.setUint16(bpsOff, 8, true); dv.setUint16(bpsOff + 2, 8, true); dv.setUint16(bpsOff + 4, 8, true);
+  for (let k = 0; k < spp; k++) dv.setUint16(bpsOff + k * 2, 8, true);
   // DPI as a rational with denominator 1000 for fractional DPI
   dv.setUint32(xresOff, Math.round(dpi * 1000), true); dv.setUint32(xresOff + 4, 1000, true);
   dv.setUint32(yresOff, Math.round(dpi * 1000), true); dv.setUint32(yresOff + 4, 1000, true);
   let o = dataOff;
   for (let i = 0; i < width * height * 4; i += 4) {
-    out[o++] = rgba[i]; out[o++] = rgba[i + 1]; out[o++] = rgba[i + 2];
+    if (cmyk) {
+      const c = rgbToCmyk(rgba[i], rgba[i + 1], rgba[i + 2]);
+      out[o++] = c[0]; out[o++] = c[1]; out[o++] = c[2]; out[o++] = c[3];
+    } else {
+      out[o++] = rgba[i]; out[o++] = rgba[i + 1]; out[o++] = rgba[i + 2];
+    }
   }
+  return out;
+}
+
+/**
+ * A one-page PDF whose page is exactly the image's print size (pixels ÷ DPI), holding the JPEG unchanged.
+ */
+export function encodePdf(jpeg: Uint8Array, width: number, height: number, dpi: number): Uint8Array {
+  const enc = new TextEncoder();
+  const wPt = (width / dpi) * 72, hPt = (height / dpi) * 72;
+  const f = (n: number) => +n.toFixed(3);
+  const content = `q ${f(wPt)} 0 0 ${f(hPt)} 0 0 cm /Im0 Do Q`;
+  const parts: Uint8Array[] = [];
+  const offsets: number[] = [];
+  let size = 0;
+  const add = (b: Uint8Array | string) => { const u = typeof b === 'string' ? enc.encode(b) : b; parts.push(u); size += u.length; };
+  const obj = (n: number, body: string | (Uint8Array | string)[]) => {
+    offsets[n] = size;
+    add(`${n} 0 obj\n`);
+    if (typeof body === 'string') add(body); else body.forEach(add);
+    add('\nendobj\n');
+  };
+  add('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(wPt)} ${f(hPt)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+  obj(4, [`<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`, jpeg, '\nendstream']);
+  obj(5, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  const xref = size;
+  add(`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
+  add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
   return out;
 }
 

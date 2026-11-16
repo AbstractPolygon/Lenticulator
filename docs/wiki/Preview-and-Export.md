@@ -38,7 +38,8 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 |---|---|
 | **PNG** | Rendered print, lossless, tagged with the print DPI. |
 | **JPG** | Rendered print, tagged with the print DPI. |
-| **TIF** | Rendered print, uncompressed, tagged with the print DPI. |
+| **TIF** | Rendered print, uncompressed, tagged with the print DPI. Choose **RGB** (home printers) or **CMYK** (print shops that ask for it; a simple conversion, so they may apply their own colour profile). |
+| **PDF** | One page exactly the print size, with the print embedded as a high-quality JPEG. For print shops. |
 | **GIF** | Animated GIF of the aligned frames, one GIF frame per frame (no render needed). Set the speed in frames per second (1–50, default 10) and the dithering (none, Floyd–Steinberg, Atkinson (default) or ordered) next to the format buttons. **In-between** (0–4) adds motion-interpolated frames between each pair of frames for a smoother wiggle at the same speed. Choose **Back and forth** (wigglegram) or **Loop** (one way), and a **hold** in milliseconds to linger on the first and last frames. Dithering smooths gradients in the GIF's 256 colours; ordered gives a regular, retro pattern. Animations loop forward; 3D views rock back and forth. |
 | **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). Choose **Frames** to play the frames like the GIF (same fps, loop and hold; good for Reels and TikTok) or **Tilt** to record the tilt preview, and how many times it plays through (1–20 loops, default 2). |
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.36
+- Print-shop export: **PDF** with the page exactly the print size, and TIF in **CMYK** (or RGB).
+
 ## 0.3.35
 - **Printer** and **Lens sheet** presets (Print & lens) set the DPI and LPI by name; they show Custom for typed values.
   Print DPI and Lens LPI now sit side by side above them.
