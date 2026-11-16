@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; script-src 'self'; frame-src 'self' blob:; connect-src 'self' blob: data:"
+    />
+    <title>Lenticulator</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img src="./icon.svg" alt="" width="24" height="24" />
+        <span>Lenticulator</span>
+      </div>
+      <div class="actions">
+        <label class="btn primary" title="Import images (JPEG, PNG, WebP, MPO…)">
+          <input id="file-input" type="file" accept="image/*,.mpo" multiple hidden />
+          Import images
+        </label>
+        <button id="btn-save-project" class="btn">Save project</button>
+        <label class="btn">
+          <input id="project-input" type="file" accept=".json,.lenti,application/json" hidden />
+          Open project
+        </label>
+        <select id="theme" class="theme-select" aria-label="Theme" title="Theme">
+          <option value="system">Theme: System</option>
+          <option value="light">Theme: Light</option>
+          <option value="dark">Theme: Dark</option>
+          <option value="contrast">Theme: High contrast</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <!-- PRINT SETUP -->
+        <details open class="panel">
+          <summary>Print &amp; lens</summary>
+          <div class="grid2">
+            <label class="full">Size preset
+              <select id="size-preset"></select>
+            </label>
+            <label>Width <input id="width" type="number" min="0.1" step="0.01" /></label>
+            <label>Height <input id="height" type="number" min="0.1" step="0.01" /></label>
+            <label>Units
+              <select id="units"><option value="in">inches</option><option value="mm">mm</option></select>
+            </label>
+            <label>Print DPI <input id="dpi" type="number" min="72" max="4800" step="1" list="dpi-list" /></label>
+            <label>Lens LPI <input id="lpi" type="number" min="1" max="400" step="0.001" list="lpi-list" /></label>
+            <label>Lens direction
+              <select id="orientation">
+                <option value="vertical">Vertical (flip L/R, 3D)</option>
+                <option value="horizontal">Horizontal (flip up/down)</option>
+              </select>
+            </label>
+            <label>Sampling
+              <select id="sampling">
+                <option value="blend">Blend (anti-aliased)</option>
+                <option value="nearest">Nearest (crisp)</option>
+              </select>
+            </label>
+            <label class="check"><input id="reverse" type="checkbox" /> Reverse frame order</label>
+            <label class="full">Strip phase <span class="val" id="phase-val"></span>
+              <input id="phase" type="range" min="0" max="1" step="0.01" />
+            </label>
+          </div>
+          <div id="lens-info" class="info"></div>
+          <datalist id="dpi-list"></datalist>
+          <datalist id="lpi-list"></datalist>
+        </details>
+
+        <!-- FRAMES -->
+        <details open class="panel">
+          <summary>Frames <span id="frame-count" class="badge">0</span></summary>
+          <div id="dropzone" class="dropzone">
+            Drop images here, or use <b>Import images</b>.<br />
+            <small>Drag to reorder · ★ = alignment reference</small>
+          </div>
+          <ol id="frame-list" class="frame-list"></ol>
+          <div class="row">
+            <button id="btn-reverse-order" class="btn small">Reverse order</button>
+            <button id="btn-clear" class="btn small danger">Remove all</button>
+          </div>
+        </details>
+
+        <!-- ALIGNMENT -->
+        <details open class="panel">
+          <summary>Alignment</summary>
+          <label>Method
+            <select id="align-mode">
+              <option value="similarity">Whole image: shift + rotate + scale</option>
+              <option value="translation">Whole image: shift only</option>
+              <option value="keypoint">Key subject point (3D)</option>
+            </select>
+          </label>
+          <p id="align-hint" class="hint"></p>
+          <div class="row">
+            <button id="btn-pick-key" class="btn small" aria-pressed="false">Pick key point</button>
+            <button id="btn-auto-align" class="btn small primary">Auto-align</button>
+            <button id="btn-reset-align" class="btn small">Reset</button>
+          </div>
+          <fieldset id="manual-align" class="manual">
+            <legend>Selected frame <span id="sel-name"></span></legend>
+            <div class="grid4">
+              <label>X px <input id="t-dx" type="number" step="0.1" /></label>
+              <label>Y px <input id="t-dy" type="number" step="0.1" /></label>
+              <label>Rotate ° <input id="t-rot" type="number" step="0.05" /></label>
+              <label>Scale <input id="t-scale" type="number" step="0.001" min="0.2" max="5" /></label>
+            </div>
+            <p class="hint">Drag in the Align view or use arrow keys (Shift = ×10) to nudge.</p>
+          </fieldset>
+        </details>
+
+        <!-- FRAMING -->
+        <details class="panel">
+          <summary>Framing &amp; page</summary>
+          <div class="grid2">
+            <label>Fit
+              <select id="fit"><option value="cover">Fill (crop)</option><option value="contain">Fit (letterbox)</option></select>
+            </label>
+            <label>Background <input id="bg" type="color" /></label>
+            <label class="full">Zoom <span class="val" id="zoom-val"></span>
+              <input id="zoom" type="range" min="1" max="3" step="0.01" />
+            </label>
+            <label class="full">Pan X <input id="panX" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label class="full">Pan Y <input id="panY" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label>Margin <input id="margin" type="number" min="0" step="0.05" /></label>
+            <span></span>
+            <label class="check"><input id="alignBars" type="checkbox" /> Lens alignment bars</label>
+            <label class="check"><input id="cropMarks" type="checkbox" /> Crop marks</label>
+          </div>
+        </details>
+
+        <!-- TEST PATTERNS -->
+        <details class="panel">
+          <summary>Test patterns</summary>
+          <label>Pattern
+            <select id="pattern-type">
+              <option value="pitch">Pitch test (find your true LPI)</option>
+              <option value="ruler">Lens ruler (measure / check scaling)</option>
+              <option value="frames">Frame order &amp; phase test</option>
+            </select>
+          </label>
+          <div class="grid2" id="pitch-opts">
+            <label>± range (LPI) <input id="pt-range" type="number" min="0.05" step="0.05" value="1" /></label>
+            <label>Step <input id="pt-step" type="number" min="0.01" step="0.01" value="0.1" /></label>
+          </div>
+          <div class="grid2" id="frames-opts" hidden>
+            <label>Test frames <input id="ft-count" type="number" min="2" max="64" step="1" value="6" /></label>
+          </div>
+          <p id="pattern-hint" class="hint"></p>
+          <button id="btn-pattern" class="btn small primary">Generate test pattern</button>
+        </details>
+
+        <!-- EXPORT -->
+        <details open class="panel">
+          <summary>Render &amp; export</summary>
+          <div class="row">
+            <button id="btn-render" class="btn primary">Render interlaced image</button>
+          </div>
+          <div class="progress" hidden><div id="progress-bar"></div></div>
+          <div class="row">
+            <select id="export-format" aria-label="Export format">
+              <option value="png">PNG (DPI tagged)</option>
+              <option value="tiff">TIFF (uncompressed)</option>
+            </select>
+            <button id="btn-download" class="btn small" disabled>Download</button>
+            <button id="btn-print" class="btn small" disabled>Print…</button>
+          </div>
+          <p class="hint">Print at 100% / “actual size” with scaling and borderless expansion turned off.</p>
+        </details>
+      </aside>
+
+      <main class="stage">
+        <nav class="tabs" role="tablist">
+          <button role="tab" data-tab="preview" aria-selected="true">Preview</button>
+          <button role="tab" data-tab="align">Align</button>
+          <button role="tab" data-tab="output">Output</button>
+        </nav>
+
+        <section id="tab-preview" class="tab-pane" role="tabpanel">
+          <div class="canvas-wrap"><canvas id="preview-canvas"></canvas></div>
+          <div class="toolbar">
+            <button id="btn-play" class="btn small">▶ Play</button>
+            <label class="grow">View angle
+              <input id="view" type="range" min="0" max="1" step="0.001" value="0.5" />
+            </label>
+            <label class="check"><input id="preview-blend" type="checkbox" checked /> Smooth</label>
+          </div>
+          <p class="hint center">Move the mouse across the preview to “tilt” the print.</p>
+        </section>
+
+        <section id="tab-align" class="tab-pane" role="tabpanel" hidden>
+          <div class="canvas-wrap"><canvas id="align-canvas"></canvas></div>
+          <div class="toolbar">
+            <label>Overlay
+              <select id="overlay-mode">
+                <option value="onion">Onion skin</option>
+                <option value="difference">Difference</option>
+                <option value="flicker">Flicker</option>
+                <option value="frame">Selected only</option>
+                <option value="anaglyph">Anaglyph (red/cyan)</option>
+              </select>
+            </label>
+            <label class="grow">Opacity <input id="overlay-opacity" type="range" min="0" max="1" step="0.01" value="0.5" /></label>
+            <label class="check"><input id="show-crop" type="checkbox" checked /> Show print area</label>
+          </div>
+        </section>
+
+        <section id="tab-output" class="tab-pane" role="tabpanel" hidden>
+          <div class="output-wrap" id="output-wrap"><canvas id="output-canvas"></canvas></div>
+          <div class="toolbar">
+            <span id="output-title" class="grow">Nothing rendered yet.</span>
+            <label>Zoom
+              <select id="output-zoom">
+                <option value="fit">Fit</option>
+                <option value="1">100% (1 px = 1 print dot)</option>
+                <option value="2">200%</option>
+                <option value="4">400%</option>
+              </select>
+            </label>
+          </div>
+        </section>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

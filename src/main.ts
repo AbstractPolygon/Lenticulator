@@ -1,0 +1,1076 @@
+import './styles.css';
+import {
+  Affine, FrameTransform, NO_TRANSFORM, alignMap, baseMap, compose, frameMatrix, invert, outputMap, scale, apply,
+} from './core/geometry';
+import { COMMON_DPI, COMMON_LPI, lensStats } from './core/interlace';
+import { similarityToParams } from './core/align';
+import { rgbaToGray } from './core/gray';
+import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
+import {
+  AppState, Frame, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
+} from './ui/state';
+import { base64ToBlob, blobToBase64, decode, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
+import { WorkerClient } from './ui/workerClient';
+import type { FrameRef, WorkerResponse } from './worker';
+import { RenderResult, download, printResult, toPng, toTiff } from './ui/export';
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+const state: AppState = {
+  settings: loadSettings(),
+  frames: [],
+  refId: null,
+  selectedId: null,
+  keyPoint: null,
+};
+let result: RenderResult | null = null;
+let busy = false;
+const worker = new WorkerClient();
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const S = () => state.settings;
+
+// ---------------------------------------------------------------------------
+// Status / progress
+// ---------------------------------------------------------------------------
+
+let statusTimer = 0;
+function status(msg: string, kind: 'info' | 'error' = 'info', ms = 3500) {
+  const el = $('status');
+  el.textContent = msg;
+  el.classList.toggle('error', kind === 'error');
+  el.classList.add('show');
+  clearTimeout(statusTimer);
+  statusTimer = window.setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function progress(frac: number | null) {
+  const wrap = document.querySelector('.progress') as HTMLElement;
+  wrap.hidden = frac === null;
+  $('progress-bar').style.width = `${Math.round((frac ?? 0) * 100)}%`;
+}
+
+function setBusy(b: boolean) {
+  busy = b;
+  for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern']) ($(id) as HTMLButtonElement).disabled = b;
+}
+
+// ---------------------------------------------------------------------------
+// Settings form binding
+// ---------------------------------------------------------------------------
+
+const unitFactor = () => (S().units === 'mm' ? 25.4 : 1);
+
+function fillStaticOptions() {
+  const preset = $<HTMLSelectElement>('size-preset');
+  preset.innerHTML = '<option value="">Custom</option>' +
+    SIZE_PRESETS.map((p, i) => `<option value="${i}">${p.label}</option>`).join('');
+  $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
+  $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
+}
+
+function syncForm() {
+  const s = S();
+  const f = unitFactor();
+  const num = (id: string, v: number, digits = 3) => {
+    const el = $<HTMLInputElement>(id);
+    if (document.activeElement !== el) el.value = String(+v.toFixed(digits));
+  };
+  num('width', s.widthIn * f);
+  num('height', s.heightIn * f);
+  $<HTMLSelectElement>('units').value = s.units;
+  num('dpi', s.dpi, 2);
+  num('lpi', s.lpi, 3);
+  $<HTMLSelectElement>('orientation').value = s.orientation;
+  $<HTMLSelectElement>('sampling').value = s.sampling;
+  $<HTMLInputElement>('reverse').checked = s.reverse;
+  $<HTMLInputElement>('phase').value = String(s.phase);
+  $('phase-val').textContent = `${Math.round(s.phase * 100)}% of a lens`;
+  $<HTMLSelectElement>('fit').value = s.fit;
+  $<HTMLInputElement>('zoom').value = String(s.zoom);
+  $('zoom-val').textContent = `${Math.round(s.zoom * 100)}%`;
+  $<HTMLInputElement>('panX').value = String(s.panX);
+  $<HTMLInputElement>('panY').value = String(s.panY);
+  $<HTMLInputElement>('bg').value = s.background;
+  num('margin', s.marginIn * f);
+  $<HTMLInputElement>('alignBars').checked = s.alignBars;
+  $<HTMLInputElement>('cropMarks').checked = s.cropMarks;
+  $<HTMLSelectElement>('align-mode').value = s.alignMode;
+  $<HTMLSelectElement>('export-format').value = s.exportFormat;
+  const pi = SIZE_PRESETS.findIndex(
+    (p) => (Math.abs(p.w - s.widthIn) < 1e-3 && Math.abs(p.h - s.heightIn) < 1e-3) ||
+      (Math.abs(p.h - s.widthIn) < 1e-3 && Math.abs(p.w - s.heightIn) < 1e-3),
+  );
+  $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
+  updateLensInfo();
+  updateAlignHint();
+}
+
+function bindSettings() {
+  const on = (id: string, ev: string, fn: (el: HTMLInputElement) => void) =>
+    $<HTMLInputElement>(id).addEventListener(ev, (e) => {
+      fn(e.target as HTMLInputElement);
+      saveSettings(S());
+      syncForm();
+      scheduleRedraw();
+    });
+  const pos = (v: string, fallback: number) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  };
+  on('size-preset', 'change', (el) => {
+    const p = SIZE_PRESETS[+el.value];
+    if (!p) return;
+    // keep current orientation (portrait/landscape)
+    const portrait = S().heightIn > S().widthIn;
+    S().widthIn = portrait ? Math.min(p.w, p.h) : Math.max(p.w, p.h);
+    S().heightIn = portrait ? Math.max(p.w, p.h) : Math.min(p.w, p.h);
+  });
+  on('width', 'change', (el) => (S().widthIn = pos(el.value, S().widthIn * unitFactor()) / unitFactor()));
+  on('height', 'change', (el) => (S().heightIn = pos(el.value, S().heightIn * unitFactor()) / unitFactor()));
+  on('units', 'change', (el) => (S().units = el.value as Settings['units']));
+  on('dpi', 'change', (el) => (S().dpi = Math.min(4800, pos(el.value, S().dpi))));
+  on('lpi', 'change', (el) => (S().lpi = pos(el.value, S().lpi)));
+  on('orientation', 'change', (el) => (S().orientation = el.value as Settings['orientation']));
+  on('sampling', 'change', (el) => (S().sampling = el.value as Settings['sampling']));
+  on('reverse', 'change', (el) => (S().reverse = el.checked));
+  on('phase', 'input', (el) => (S().phase = +el.value));
+  on('fit', 'change', (el) => (S().fit = el.value as Settings['fit']));
+  on('zoom', 'input', (el) => (S().zoom = +el.value));
+  on('panX', 'input', (el) => (S().panX = +el.value));
+  on('panY', 'input', (el) => (S().panY = +el.value));
+  on('bg', 'input', (el) => (S().background = el.value));
+  on('margin', 'change', (el) => (S().marginIn = Math.max(0, parseFloat(el.value) || 0) / unitFactor()));
+  on('alignBars', 'change', (el) => (S().alignBars = el.checked));
+  on('cropMarks', 'change', (el) => (S().cropMarks = el.checked));
+  on('align-mode', 'change', (el) => (S().alignMode = el.value as Settings['alignMode']));
+  on('export-format', 'change', (el) => (S().exportFormat = el.value as Settings['exportFormat']));
+}
+
+function activeFrames(): Frame[] {
+  return state.frames.filter((f) => f.enabled);
+}
+
+function updateLensInfo() {
+  const s = S();
+  const n = activeFrames().length;
+  const st = lensStats(s.lpi, s.dpi, Math.max(1, n));
+  const px = outputPixels(s);
+  const mpx = (px.w * px.h) / 1e6;
+  const lenses = (s.orientation === 'vertical' ? s.widthIn : s.heightIn) * s.lpi;
+  const lines = [
+    `<b>${st.pixelsPerLens.toFixed(2)}</b> print dots per lens` +
+      (n ? ` · <b>${st.pixelsPerFrameStrip.toFixed(2)}</b> per frame strip` : ''),
+    `Output <b>${px.w} × ${px.h}</b> px (${mpx.toFixed(1)} MP) · ${Math.round(lenses)} lenses`,
+  ];
+  if (n > st.maxUsefulFrames)
+    lines.push(`<span class="warn">⚠ ${n} frames exceeds ${st.maxUsefulFrames} dots/lens – raise DPI or use fewer frames.</span>`);
+  if (mpx > 250) lines.push('<span class="warn">⚠ Very large output; browsers may fail above ~250 MP.</span>');
+  if (!st.integerPixels)
+    lines.push(`Tip: ${Math.round(st.pixelsPerLens) * s.lpi} DPI would give a whole number of dots per lens.`);
+  $('lens-info').innerHTML = lines.join('<br>');
+  $('frame-count').textContent = String(state.frames.length);
+}
+
+function updateAlignHint() {
+  const m = S().alignMode;
+  $('align-hint').textContent =
+    m === 'keypoint'
+      ? 'For 3D: click “Pick key point”, then click the subject that should sit at the print surface. Each frame is shifted so that point lines up; foreground and background keep their parallax.'
+      : m === 'translation'
+        ? 'Aligns whole images by shifting only. Best for flip/animation frames from a tripod.'
+        : 'Corrects shift, small rotation and zoom differences between frames (hand-held shots, scans).';
+  $('btn-pick-key').hidden = m !== 'keypoint';
+}
+
+// ---------------------------------------------------------------------------
+// Frames
+// ---------------------------------------------------------------------------
+
+async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
+  const list = [...files];
+  if (!list.length) return;
+  status(`Importing ${list.length} file(s)…`, 'info', 10000);
+  let added = 0;
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i];
+    const baseName = names?.[i] ?? (file as File).name ?? `Frame ${state.frames.length + 1}`;
+    try {
+      const parts = await splitMultiPicture(file);
+      for (let p = 0; p < parts.length; p++) {
+        const blob = parts.length > 1 ? parts[p] : file;
+        await addFrame(blob, parts.length > 1 ? `${baseName} [${p + 1}]` : baseName);
+        added++;
+      }
+    } catch (e) {
+      status(`Could not read ${baseName}: ${(e as Error).message}`, 'error', 6000);
+    }
+  }
+  if (added) status(`Added ${added} frame(s).`);
+  renderFrameList();
+  updateLensInfo();
+  scheduleRedraw();
+}
+
+async function addFrame(blob: Blob, name: string, transform: FrameTransform = NO_TRANSFORM, enabled = true): Promise<Frame> {
+  const bitmap = await decode(blob);
+  const frame: Frame = {
+    id: uid(),
+    name,
+    blob,
+    bitmap,
+    width: bitmap.width,
+    height: bitmap.height,
+    thumb: thumbnail(bitmap),
+    transform: { ...transform },
+    enabled,
+  };
+  const px = pixels(bitmap);
+  // the worker samples full-res pixels; scale the transform if we capped the size
+  worker.send({ type: 'setFrame', id: frame.id, width: px.width, height: px.height, data: px.data.buffer }, [px.data.buffer]);
+  workerSizes.set(frame.id, { w: px.width, h: px.height });
+  state.frames.push(frame);
+  if (!state.refId) state.refId = frame.id;
+  if (!state.selectedId) state.selectedId = frame.id;
+  return frame;
+}
+/** dimensions of the pixel copy held by the worker (may be capped) */
+const workerSizes = new Map<string, { w: number; h: number }>();
+
+function removeFrame(id: string) {
+  const i = state.frames.findIndex((f) => f.id === id);
+  if (i < 0) return;
+  state.frames[i].bitmap.close();
+  state.frames.splice(i, 1);
+  worker.send({ type: 'dropFrame', id });
+  workerSizes.delete(id);
+  if (state.refId === id) state.refId = state.frames[0]?.id ?? null;
+  if (state.selectedId === id) state.selectedId = state.frames[Math.min(i, state.frames.length - 1)]?.id ?? null;
+}
+
+function refFrame(): Frame | undefined {
+  return state.frames.find((f) => f.id === state.refId) ?? state.frames[0];
+}
+function selFrame(): Frame | undefined {
+  return state.frames.find((f) => f.id === state.selectedId);
+}
+
+let dragId: string | null = null;
+function renderFrameList() {
+  const ol = $('frame-list');
+  ol.innerHTML = '';
+  state.frames.forEach((f, i) => {
+    const li = document.createElement('li');
+    li.draggable = true;
+    li.className = [f.id === state.selectedId ? 'selected' : '', f.enabled ? '' : 'disabled'].join(' ');
+    const conf = f.confidence != null ? ` · match ${Math.round(f.confidence * 100)}%` : '';
+    li.innerHTML = `
+      <span class="num">${i + 1}</span>
+      <img alt="" src="${f.thumb}">
+      <div><div class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+      <div class="meta">${f.width}×${f.height}${conf}</div></div>
+      <div class="tools">
+        <button class="icon-btn ${f.id === state.refId ? 'on' : ''}" data-act="ref" title="Use as alignment reference">★</button>
+        <button class="icon-btn" data-act="toggle" title="${f.enabled ? 'Exclude from print' : 'Include in print'}">${f.enabled ? '◉' : '○'}</button>
+        <button class="icon-btn" data-act="remove" title="Remove">✕</button>
+      </div>`;
+    li.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest('button')?.dataset.act;
+      if (act === 'ref') state.refId = f.id;
+      else if (act === 'toggle') f.enabled = !f.enabled;
+      else if (act === 'remove') removeFrame(f.id);
+      else state.selectedId = f.id;
+      renderFrameList();
+      updateLensInfo();
+      scheduleRedraw();
+    });
+    li.addEventListener('dragstart', (e) => {
+      dragId = f.id;
+      e.dataTransfer!.effectAllowed = 'move';
+      e.dataTransfer!.setData('text/x-frame', f.id);
+    });
+    li.addEventListener('dragover', (e) => {
+      if (!dragId) return;
+      e.preventDefault();
+      li.classList.add('drag-over');
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('drop', (e) => {
+      if (!dragId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const from = state.frames.findIndex((x) => x.id === dragId);
+      const [moved] = state.frames.splice(from, 1);
+      const to = state.frames.findIndex((x) => x.id === f.id);
+      state.frames.splice(to, 0, moved);
+      dragId = null;
+      renderFrameList();
+      scheduleRedraw();
+    });
+    li.addEventListener('dragend', () => (dragId = null));
+    ol.appendChild(li);
+  });
+  syncManual();
+}
+
+function syncManual() {
+  const f = selFrame();
+  const fs = $<HTMLFieldSetElement>('manual-align');
+  fs.disabled = !f;
+  $('sel-name').textContent = f ? `#${state.frames.indexOf(f) + 1}` : '';
+  const t = f?.transform ?? NO_TRANSFORM;
+  const set = (id: string, v: number, d: number) => {
+    const el = $<HTMLInputElement>(id);
+    if (document.activeElement !== el) el.value = String(+v.toFixed(d));
+  };
+  set('t-dx', t.dx, 2);
+  set('t-dy', t.dy, 2);
+  set('t-rot', t.rotation, 3);
+  set('t-scale', t.scale, 4);
+}
+
+function bindManual() {
+  const bind = (id: string, key: keyof FrameTransform) =>
+    $<HTMLInputElement>(id).addEventListener('change', (e) => {
+      const f = selFrame();
+      const v = parseFloat((e.target as HTMLInputElement).value);
+      if (!f || !Number.isFinite(v)) return;
+      f.transform = { ...f.transform, [key]: key === 'scale' ? Math.max(0.05, v) : v };
+      f.confidence = undefined;
+      renderFrameList();
+      scheduleRedraw();
+    });
+  bind('t-dx', 'dx');
+  bind('t-dy', 'dy');
+  bind('t-rot', 'rotation');
+  bind('t-scale', 'scale');
+}
+
+function nudge(dx: number, dy: number) {
+  const f = selFrame();
+  if (!f) return;
+  f.transform = { ...f.transform, dx: f.transform.dx + dx, dy: f.transform.dy + dy };
+  syncManual();
+  scheduleRedraw();
+}
+
+// ---------------------------------------------------------------------------
+// Drawing: preview + align views
+// ---------------------------------------------------------------------------
+
+let redrawQueued = false;
+function scheduleRedraw() {
+  if (redrawQueued) return;
+  redrawQueued = true;
+  requestAnimationFrame(() => {
+    redrawQueued = false;
+    drawPreview();
+    drawAlign();
+  });
+}
+
+function fitCanvas(canvas: HTMLCanvasElement, aspect: number) {
+  const wrap = canvas.parentElement!;
+  const maxW = Math.max(50, wrap.clientWidth - 28);
+  const maxH = Math.max(50, wrap.clientHeight - 28);
+  let w = maxW, h = maxW / aspect;
+  if (h > maxH) { h = maxH; w = maxH * aspect; }
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = `${Math.round(w)}px`;
+  canvas.style.height = `${Math.round(h)}px`;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  return { w: canvas.width, h: canvas.height };
+}
+
+function previewMatrix(f: Frame, out: { w: number; h: number }): Affine {
+  const ref = refFrame()!;
+  return frameMatrix(out, { w: ref.width, h: ref.height }, { w: f.width, h: f.height }, f.transform, framing(S()));
+}
+
+let viewT = 0.5;
+function drawPreview() {
+  const canvas = $<HTMLCanvasElement>('preview-canvas');
+  const s = S();
+  const { w, h } = fitCanvas(canvas, s.widthIn / s.heightIn);
+  const ctx = canvas.getContext('2d')!;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = s.background;
+  ctx.fillRect(0, 0, w, h);
+  const frames = activeFrames();
+  if (!frames.length) {
+    ctx.fillStyle = '#888';
+    ctx.font = `${Math.round(h / 18)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Import two or more images to begin', w / 2, h / 2);
+    return;
+  }
+  const ordered = s.reverse ? [...frames].reverse() : frames;
+  const pos = viewT * (ordered.length - 1);
+  const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
+  const t = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
+  const draw = (f: Frame, alpha: number) => {
+    const m = previewMatrix(f, { w, h });
+    // canvas px ← frame px  =  inverse(output → frame)
+    ctx.setTransform(...invert(m));
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(f.bitmap, 0, 0);
+  };
+  draw(ordered[i0], 1);
+  if (t > 0.001) draw(ordered[i1], t);
+  ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+let flickerOn = false;
+let pickingKey = false;
+function alignViewMatrix(f: Frame, sa: number): Affine {
+  // canvas ← ref ← frame  :  canvas = sa · A⁻¹ · B⁻¹
+  const ref = refFrame()!;
+  const R = { w: ref.width, h: ref.height };
+  return compose(scale(sa), invert(alignMap(R, f.transform)), invert(baseMap(R, { w: f.width, h: f.height })));
+}
+
+function drawAlign() {
+  const canvas = $<HTMLCanvasElement>('align-canvas');
+  const ref = refFrame();
+  const ctx = canvas.getContext('2d')!;
+  if (!ref) {
+    fitCanvas(canvas, 1.5);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  const { w, h } = fitCanvas(canvas, ref.width / ref.height);
+  const sa = w / ref.width;
+  const sel = selFrame() ?? ref;
+  const mode = $<HTMLSelectElement>('overlay-mode').value;
+  const opacity = +$<HTMLInputElement>('overlay-opacity').value;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  const draw = (f: Frame, alpha = 1, op: GlobalCompositeOperation = 'source-over') => {
+    ctx.setTransform(...alignViewMatrix(f, sa));
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = op;
+    ctx.drawImage(f.bitmap, 0, 0);
+  };
+  if (mode === 'frame') draw(sel);
+  else if (mode === 'flicker') draw(flickerOn ? sel : ref);
+  else if (mode === 'difference') { draw(ref); draw(sel, 1, 'difference'); }
+  else if (mode === 'anaglyph') {
+    // red from reference, cyan from selected
+    const tmp = (f: Frame, color: string) => {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const x = c.getContext('2d')!;
+      x.setTransform(...alignViewMatrix(f, sa));
+      x.drawImage(f.bitmap, 0, 0);
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.globalCompositeOperation = 'multiply';
+      x.fillStyle = color;
+      x.fillRect(0, 0, w, h);
+      return c;
+    };
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(tmp(ref, '#ff0000'), 0, 0);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(tmp(sel, '#00ffff'), 0, 0);
+  } else { draw(ref); draw(sel, opacity); }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  const dpr = window.devicePixelRatio || 1;
+  if ($<HTMLInputElement>('show-crop').checked) {
+    // print area in reference coords
+    const s = S();
+    const out = { w: s.widthIn, h: s.heightIn };
+    const m = outputMap(out, { w: ref.width, h: ref.height }, framing(s));
+    const pts = [[0, 0], [out.w, 0], [out.w, out.h], [0, out.h]].map(([x, y]) => apply(m, x, y));
+    ctx.strokeStyle = '#ffd84a';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.setLineDash([6 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * sa, y * sa) : ctx.moveTo(x * sa, y * sa)));
+    ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (state.keyPoint && S().alignMode === 'keypoint') {
+    const x = state.keyPoint.x * sa, y = state.keyPoint.y * sa, r = 14 * dpr;
+    ctx.strokeStyle = '#4af2ff';
+    ctx.lineWidth = 2 * dpr;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.moveTo(x - r * 1.6, y); ctx.lineTo(x + r * 1.6, y);
+    ctx.moveTo(x, y - r * 1.6); ctx.lineTo(x, y + r * 1.6);
+    ctx.stroke();
+  }
+}
+
+function bindViews() {
+  const pc = $<HTMLCanvasElement>('preview-canvas');
+  pc.addEventListener('pointermove', (e) => {
+    if (playing) return;
+    const r = pc.getBoundingClientRect();
+    viewT = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    $<HTMLInputElement>('view').value = String(viewT);
+    scheduleRedraw();
+  });
+  $('view').addEventListener('input', (e) => {
+    viewT = +(e.target as HTMLInputElement).value;
+    scheduleRedraw();
+  });
+  $('preview-blend').addEventListener('change', scheduleRedraw);
+  $('btn-play').addEventListener('click', togglePlay);
+
+  for (const id of ['overlay-mode', 'overlay-opacity', 'show-crop']) $(id).addEventListener('input', scheduleRedraw);
+
+  setInterval(() => {
+    if ($<HTMLSelectElement>('overlay-mode').value === 'flicker' && !$('tab-align').hidden) {
+      flickerOn = !flickerOn;
+      drawAlign();
+    }
+  }, 350);
+
+  const ac = $<HTMLCanvasElement>('align-canvas');
+  let drag: { x: number; y: number; t: FrameTransform } | null = null;
+  const toRef = (e: PointerEvent) => {
+    const ref = refFrame()!;
+    const r = ac.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * ref.width, y: ((e.clientY - r.top) / r.height) * ref.height };
+  };
+  ac.addEventListener('pointerdown', (e) => {
+    const ref = refFrame();
+    if (!ref) return;
+    if (pickingKey) {
+      state.keyPoint = toRef(e);
+      setPicking(false);
+      status('Key point set. Click Auto-align to line every frame up on it.');
+      scheduleRedraw();
+      return;
+    }
+    const f = selFrame();
+    if (!f) return;
+    ac.setPointerCapture(e.pointerId);
+    ac.classList.add('dragging');
+    const p = toRef(e);
+    drag = { x: p.x, y: p.y, t: { ...f.transform } };
+  });
+  ac.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const f = selFrame();
+    if (!f) return;
+    const p = toRef(e);
+    // moving the picture right means sampling further left: dx decreases
+    f.transform = { ...drag.t, dx: drag.t.dx - (p.x - drag.x), dy: drag.t.dy - (p.y - drag.y) };
+    f.confidence = undefined;
+    syncManual();
+    scheduleRedraw();
+  });
+  const end = () => {
+    if (drag) renderFrameList();
+    drag = null;
+    ac.classList.remove('dragging');
+  };
+  ac.addEventListener('pointerup', end);
+  ac.addEventListener('pointercancel', end);
+
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if ($('tab-align').hidden) return;
+    const k = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+    const map: Record<string, [number, number]> = {
+      ArrowLeft: [k, 0], ArrowRight: [-k, 0], ArrowUp: [0, k], ArrowDown: [0, -k],
+    };
+    if (map[e.key]) {
+      e.preventDefault();
+      nudge(...map[e.key]);
+    } else if (e.key === '[' || e.key === ']') {
+      const i = state.frames.findIndex((f) => f.id === state.selectedId);
+      const n = state.frames[i + (e.key === ']' ? 1 : -1)];
+      if (n) { state.selectedId = n.id; renderFrameList(); scheduleRedraw(); }
+    }
+  });
+  window.addEventListener('resize', scheduleRedraw);
+}
+
+let playing = false;
+let playRaf = 0;
+function togglePlay() {
+  playing = !playing;
+  $('btn-play').textContent = playing ? '❚❚ Pause' : '▶ Play';
+  const t0 = performance.now();
+  const start = viewT;
+  const step = (now: number) => {
+    if (!playing) return;
+    // ping-pong, ~2.4 s per sweep
+    const ph = ((now - t0) / 2400 + Math.asin(2 * start - 1) / Math.PI + 0.5) % 2;
+    viewT = 0.5 - 0.5 * Math.cos(ph * Math.PI);
+    $<HTMLInputElement>('view').value = String(viewT);
+    drawPreview();
+    playRaf = requestAnimationFrame(step);
+  };
+  cancelAnimationFrame(playRaf);
+  if (playing) playRaf = requestAnimationFrame(step);
+}
+
+function setPicking(on: boolean) {
+  pickingKey = on;
+  $('btn-pick-key').setAttribute('aria-pressed', String(on));
+  $('align-canvas').classList.toggle('picking', on);
+  if (on) {
+    showTab('align');
+    status('Click the key subject in the reference frame.');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auto-align
+// ---------------------------------------------------------------------------
+
+const ANALYSIS_MAX = 768;
+
+function analysisGray(f: Frame, ref: Frame, aw: number, ah: number) {
+  const c = document.createElement('canvas');
+  c.width = aw;
+  c.height = ah;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  const sa = aw / ref.width;
+  // analysis ← ref ← frame (base mapping only, no alignment)
+  ctx.setTransform(...compose(scale(sa), invert(baseMap({ w: ref.width, h: ref.height }, { w: f.width, h: f.height }))));
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(f.bitmap, 0, 0);
+  const id = ctx.getImageData(0, 0, aw, ah);
+  return rgbaToGray(id.data, aw, ah);
+}
+
+async function autoAlign() {
+  const ref = refFrame();
+  if (!ref || state.frames.length < 2) return status('Import at least two images first.', 'error');
+  const mode = S().alignMode;
+  if (mode === 'keypoint' && !state.keyPoint) {
+    setPicking(true);
+    return;
+  }
+  setBusy(true);
+  progress(0);
+  status('Aligning frames…', 'info', 30000);
+  try {
+    const sa = Math.min(1, ANALYSIS_MAX / Math.max(ref.width, ref.height));
+    const aw = Math.max(16, Math.round(ref.width * sa));
+    const ah = Math.max(16, Math.round(ref.height * sa));
+    const fa = aw / ref.width;
+    const refGray = analysisGray(ref, ref, aw, ah);
+    // align outward from the reference so each frame starts from its neighbour's result
+    const ri = state.frames.indexOf(ref);
+    const order: { index: number; initFrom: number | null }[] = [];
+    for (let i = ri + 1; i < state.frames.length; i++) order.push({ index: i, initFrom: i - 1 === ri ? null : i - 1 });
+    for (let i = ri - 1; i >= 0; i--) order.push({ index: i, initFrom: i + 1 === ri ? null : i + 1 });
+    const items = order.map((o) => ({ ...o, gray: analysisGray(state.frames[o.index], ref, aw, ah) }));
+    const key = state.keyPoint ? { x: state.keyPoint.x * fa - 0.5, y: state.keyPoint.y * fa - 0.5 } : undefined;
+    const res = await worker.request<Extract<WorkerResponse, { type: 'aligned' }>>(
+      (reqId) => ({ type: 'align', reqId, ref: refGray, items, mode, key }),
+      [],
+      (d, t) => progress(d / t),
+    );
+    ref.transform = { ...NO_TRANSFORM };
+    ref.confidence = 1;
+    let low = 0;
+    for (const { index, result: r } of res.results) {
+      const p = similarityToParams(r);
+      const f = state.frames[index];
+      f.transform = { dx: p.dx / fa, dy: p.dy / fa, rotation: p.rotation, scale: p.scale };
+      f.confidence = r.confidence;
+      if (r.confidence < 0.35) low++;
+    }
+    status(
+      low
+        ? `Aligned, but ${low} frame(s) matched poorly – check them in the Align tab.`
+        : `Aligned ${res.results.length} frame(s) to #${ri + 1}.`,
+      low ? 'error' : 'info',
+      6000,
+    );
+  } catch (e) {
+    status(`Alignment failed: ${(e as Error).message}`, 'error', 8000);
+  } finally {
+    setBusy(false);
+    progress(null);
+    renderFrameList();
+    scheduleRedraw();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Render / patterns / export
+// ---------------------------------------------------------------------------
+
+async function runRender(
+  frames: FrameRef[],
+  matrices: Affine[],
+  title: string,
+  fileBase: string,
+  overrides: Partial<Settings> = {},
+) {
+  const s = { ...S(), ...overrides };
+  const { w, h } = outputPixels(s);
+  if (w * h > 400e6) throw new Error(`Output of ${w}×${h} px is too large. Lower the DPI or size.`);
+  setBusy(true);
+  progress(0);
+  status(`Rendering ${w}×${h}…`, 'info', 60000);
+  const t0 = performance.now();
+  try {
+    const res = await worker.request<Extract<WorkerResponse, { type: 'rendered' }>>(
+      (reqId) => ({
+        type: 'render', reqId, width: w, height: h, orientation: s.orientation,
+        lens: { lpi: s.lpi, dpi: s.dpi, frames: frames.length, phase: s.phase, reverse: s.reverse, sampling: s.sampling },
+        frames, matrices, background: hexToRgb(s.background),
+        page: { margin: s.marginIn * s.dpi, alignBars: s.alignBars, cropMarks: s.cropMarks },
+      }),
+      [],
+      (d, t) => progress(d / t),
+    );
+    const rgba = new Uint8ClampedArray(res.data);
+    const canvas = document.createElement('canvas');
+    canvas.width = res.width;
+    canvas.height = res.height;
+    canvas.getContext('2d')!.putImageData(new ImageData(rgba, res.width, res.height), 0, 0);
+    setResult({ canvas, rgba, width: res.width, height: res.height, dpi: s.dpi, title, fileBase });
+    status(`Rendered in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
+  } finally {
+    setBusy(false);
+    progress(null);
+  }
+}
+
+async function renderPrint() {
+  const frames = activeFrames();
+  if (frames.length < 2) return status('Need at least two enabled frames.', 'error');
+  const ref = refFrame()!;
+  const out = outputPixels(S());
+  const matrices = frames.map((f) => {
+    // map into the worker's (possibly downscaled) pixel copy
+    const ws = workerSizes.get(f.id)!;
+    const m = frameMatrix(out, { w: ref.width, h: ref.height }, { w: f.width, h: f.height }, f.transform, framing(S()));
+    return compose(scale(ws.w / f.width, ws.h / f.height), m);
+  });
+  const s = S();
+  try {
+    await runRender(
+      frames.map((f) => ({ id: f.id })), matrices,
+      `Interlaced · ${frames.length} frames · ${s.lpi} LPI · ${s.dpi} DPI`,
+      `lenticular_${s.lpi}lpi_${s.dpi}dpi`,
+    );
+    showTab('output');
+  } catch (e) {
+    status(`Render failed: ${(e as Error).message}`, 'error', 8000);
+  }
+}
+
+function patternToCanvas(p: Pattern): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = p.image.width;
+  c.height = p.image.height;
+  const ctx = c.getContext('2d')!;
+  ctx.putImageData(new ImageData(p.image.data as Uint8ClampedArray<ArrayBuffer>, p.image.width, p.image.height), 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.textBaseline = 'middle';
+  for (const l of p.labels) {
+    ctx.save();
+    ctx.font = `600 ${Math.round(l.size)}px system-ui, sans-serif`;
+    ctx.textAlign = l.align === 'center' ? 'center' : 'left';
+    ctx.translate(l.x, l.y);
+    if (l.rotate) ctx.rotate(Math.PI / 2);
+    ctx.fillText(l.text, 0, 0);
+    ctx.restore();
+  }
+  return c;
+}
+
+async function generatePattern() {
+  const s = S();
+  const type = $<HTMLSelectElement>('pattern-type').value;
+  const { w, h } = outputPixels(s);
+  try {
+    if (type === 'pitch' || type === 'ruler') {
+      if (w * h > 200e6) throw new Error('Pattern too large; lower DPI or size.');
+      const range = Math.max(0.01, parseFloat($<HTMLInputElement>('pt-range').value) || 1);
+      const step = Math.max(0.005, parseFloat($<HTMLInputElement>('pt-step').value) || 0.1);
+      if ((2 * range) / step > 200) throw new Error('Too many bands: increase the step or reduce the range.');
+      setBusy(true);
+      status('Generating…');
+      await new Promise((r) => setTimeout(r, 30));
+      const p = type === 'pitch'
+        ? pitchTest({ dpi: s.dpi, lpi: s.lpi, range, step, widthPx: w, heightPx: h, orientation: s.orientation })
+        : lensRuler({ dpi: s.dpi, lpi: s.lpi, widthPx: w, heightPx: h, orientation: s.orientation });
+      const canvas = patternToCanvas(p);
+      const rgba = canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
+      setResult({
+        canvas, rgba, width: w, height: h, dpi: s.dpi,
+        title: type === 'pitch' ? `Pitch test ${s.lpi - range}–${s.lpi + range} LPI (step ${step})` : `Lens ruler ${s.lpi} LPI`,
+        fileBase: type === 'pitch' ? `pitch_test_${s.lpi}lpi_${s.dpi}dpi` : `lens_ruler_${s.lpi}lpi_${s.dpi}dpi`,
+      });
+      setBusy(false);
+    } else {
+      const n = Math.max(2, Math.min(64, parseInt($<HTMLInputElement>('ft-count').value) || 6));
+      // small synthetic frames: coloured field, big number, and an arrow that points to the frame's position
+      const fw = 600, fh = Math.round((600 * h) / w) || 400;
+      const frames: FrameRef[] = [];
+      for (let i = 0; i < n; i++) {
+        const c = document.createElement('canvas');
+        c.width = fw; c.height = fh;
+        const x = c.getContext('2d')!;
+        const [r, g, b] = frameColor(i, n);
+        x.fillStyle = `rgb(${r},${g},${b})`;
+        x.fillRect(0, 0, fw, fh);
+        x.fillStyle = '#fff';
+        x.font = `700 ${Math.round(fh * 0.5)}px system-ui, sans-serif`;
+        x.textAlign = 'center';
+        x.textBaseline = 'middle';
+        x.fillText(String(i + 1), fw / 2, fh * 0.45);
+        x.font = `600 ${Math.round(fh * 0.08)}px system-ui, sans-serif`;
+        x.fillText(`frame ${i + 1} of ${n}`, fw / 2, fh * 0.85);
+        // position marker bar
+        x.fillRect((i / n) * fw, fh * 0.94, fw / n, fh * 0.06);
+        const id = x.getImageData(0, 0, fw, fh);
+        frames.push({ width: fw, height: fh, data: id.data });
+      }
+      const out = outputPixels(s);
+      const m = frameMatrix(out, { w: fw, h: fh }, { w: fw, h: fh }, NO_TRANSFORM, { fit: 'cover', zoom: 1, panX: 0, panY: 0 });
+      await runRender(frames, frames.map(() => m), `Frame order test · ${n} frames · ${s.lpi} LPI`, `frame_test_${n}f_${s.lpi}lpi`);
+    }
+    showTab('output');
+  } catch (e) {
+    setBusy(false);
+    status((e as Error).message, 'error', 6000);
+  }
+}
+
+function setResult(r: RenderResult) {
+  result = r;
+  ($('btn-download') as HTMLButtonElement).disabled = false;
+  ($('btn-print') as HTMLButtonElement).disabled = false;
+  $('output-title').textContent =
+    `${r.title} — ${r.width}×${r.height} px = ${(r.width / r.dpi).toFixed(3)}×${(r.height / r.dpi).toFixed(3)} in`;
+  drawOutput();
+}
+
+function drawOutput() {
+  const c = $<HTMLCanvasElement>('output-canvas');
+  if (!result) return;
+  const zoom = $<HTMLSelectElement>('output-zoom').value;
+  const wrap = $('output-wrap');
+  const dpr = window.devicePixelRatio || 1;
+  if (zoom === 'fit') {
+    const s = Math.min((wrap.clientWidth - 28) / result.width, (wrap.clientHeight - 28) / result.height, 1);
+    const w = Math.max(1, Math.round(result.width * s));
+    const h = Math.max(1, Math.round(result.height * s));
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(result.canvas, 0, 0, c.width, c.height);
+  } else {
+    // 1:1 (or magnified): show the full-res canvas directly, scaled by CSS
+    const z = +zoom;
+    c.width = result.width;
+    c.height = result.height;
+    c.getContext('2d')!.drawImage(result.canvas, 0, 0);
+    c.style.width = `${(result.width * z) / dpr}px`;
+    c.style.height = `${(result.height * z) / dpr}px`;
+  }
+}
+
+async function exportResult() {
+  if (!result) return;
+  try {
+    status('Encoding…', 'info', 30000);
+    const fmt = S().exportFormat;
+    const blob = fmt === 'tiff' ? toTiff(result) : await toPng(result);
+    download(blob, `${result.fileBase}.${fmt === 'tiff' ? 'tif' : 'png'}`);
+    status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${fmt.toUpperCase()} at ${result.dpi} DPI.`);
+  } catch (e) {
+    status(`Export failed: ${(e as Error).message}`, 'error', 8000);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+interface ProjectFile {
+  app: 'lenticulator';
+  version: 1;
+  settings: Settings;
+  refIndex: number;
+  keyPoint: AppState['keyPoint'];
+  frames: { name: string; type: string; data: string; transform: FrameTransform; enabled: boolean }[];
+}
+
+async function saveProject() {
+  if (!state.frames.length) return status('Nothing to save yet.', 'error');
+  status('Saving project…', 'info', 30000);
+  const proj: ProjectFile = {
+    app: 'lenticulator',
+    version: 1,
+    settings: S(),
+    refIndex: Math.max(0, state.frames.findIndex((f) => f.id === state.refId)),
+    keyPoint: state.keyPoint,
+    frames: await Promise.all(
+      state.frames.map(async (f) => ({
+        name: f.name, type: f.blob.type || 'image/jpeg', data: await blobToBase64(f.blob),
+        transform: f.transform, enabled: f.enabled,
+      })),
+    ),
+  };
+  download(new Blob([JSON.stringify(proj)], { type: 'application/json' }), 'project.lenti.json');
+  status('Project saved.');
+}
+
+async function openProject(file: File) {
+  try {
+    const proj = JSON.parse(await file.text()) as ProjectFile;
+    if (proj.app !== 'lenticulator') throw new Error('Not a Lenticulator project');
+    for (const f of [...state.frames]) removeFrame(f.id);
+    state.settings = { ...loadSettings(), ...proj.settings };
+    saveSettings(S());
+    for (const f of proj.frames) await addFrame(base64ToBlob(f.data, f.type), f.name, f.transform, f.enabled);
+    state.refId = state.frames[proj.refIndex]?.id ?? state.frames[0]?.id ?? null;
+    state.selectedId = state.refId;
+    state.keyPoint = proj.keyPoint;
+    syncForm();
+    renderFrameList();
+    scheduleRedraw();
+    status(`Opened project with ${proj.frames.length} frames.`);
+  } catch (e) {
+    status(`Could not open project: ${(e as Error).message}`, 'error', 6000);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tabs, drag & drop, buttons
+// ---------------------------------------------------------------------------
+
+function showTab(name: string) {
+  document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+    b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  for (const t of ['preview', 'align', 'output']) $(`tab-${t}`).hidden = t !== name;
+  if (name === 'output') drawOutput();
+  else scheduleRedraw();
+}
+
+function bindChrome() {
+  document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+    b.addEventListener('click', () => showTab(b.dataset.tab!)));
+  $<HTMLInputElement>('file-input').addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    const files = [...(input.files ?? [])].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    importFiles(files).finally(() => (input.value = ''));
+  });
+  $<HTMLInputElement>('project-input').addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) openProject(input.files[0]).finally(() => (input.value = ''));
+  });
+  $('btn-save-project').addEventListener('click', saveProject);
+  $('btn-reverse-order').addEventListener('click', () => {
+    state.frames.reverse();
+    renderFrameList();
+    scheduleRedraw();
+  });
+  $('btn-clear').addEventListener('click', () => {
+    if (!state.frames.length || !confirm('Remove all frames?')) return;
+    for (const f of [...state.frames]) removeFrame(f.id);
+    state.keyPoint = null;
+    renderFrameList();
+    updateLensInfo();
+    scheduleRedraw();
+  });
+  $('btn-auto-align').addEventListener('click', () => !busy && autoAlign());
+  $('btn-pick-key').addEventListener('click', () => setPicking(!pickingKey));
+  $('btn-reset-align').addEventListener('click', () => {
+    for (const f of state.frames) { f.transform = { ...NO_TRANSFORM }; f.confidence = undefined; }
+    renderFrameList();
+    scheduleRedraw();
+  });
+  $('btn-render').addEventListener('click', () => !busy && renderPrint());
+  $('btn-pattern').addEventListener('click', () => !busy && generatePattern());
+  $('btn-download').addEventListener('click', exportResult);
+  $('btn-print').addEventListener('click', () => result && printResult(result).catch((e) => status(e.message, 'error')));
+  $('output-zoom').addEventListener('change', drawOutput);
+  const pt = $<HTMLSelectElement>('pattern-type');
+  const syncPattern = () => {
+    $('pitch-opts').hidden = pt.value !== 'pitch';
+    $('frames-opts').hidden = pt.value !== 'frames';
+    $('pattern-hint').textContent = {
+      pitch: 'Print, lay your lens on top with lenses parallel to the lines, and view from your normal distance. The band that flips cleanly between solid black and white (no stripes) is your true LPI – enter it above.',
+      ruler: 'Print at 100% and check the inch/cm scales with a real ruler to confirm the printer isn’t scaling. Lens lines help line up the sheet.',
+      frames: 'Each frame is a numbered colour. Tilting should step through 1, 2, 3… in order; adjust “Reverse frame order” and “Strip phase” until the middle frames face you head-on.',
+    }[pt.value] ?? '';
+  };
+  pt.addEventListener('change', syncPattern);
+  syncPattern();
+
+  // drag & drop files anywhere
+  let depth = 0;
+  window.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    depth++;
+    document.body.classList.add('dragging');
+  });
+  window.addEventListener('dragleave', () => {
+    if (--depth <= 0) { depth = 0; document.body.classList.remove('dragging'); }
+  });
+  window.addEventListener('dragover', (e) => {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  });
+  window.addEventListener('drop', (e) => {
+    depth = 0;
+    document.body.classList.remove('dragging');
+    if (!e.dataTransfer?.files.length) return;
+    e.preventDefault();
+    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/') || /\.(mpo|jps|heic|avif)$/i.test(f.name));
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    importFiles(files);
+  });
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
+
+// ---------------------------------------------------------------------------
+
+// Theme: "system" follows the OS (prefers-color-scheme); others override it.
+const THEME_KEY = 'lenticulator.theme';
+function applyTheme(t: string) {
+  document.documentElement.dataset.theme = t;
+  $<HTMLSelectElement>('theme').value = t;
+}
+let savedTheme = 'system';
+try { savedTheme = localStorage.getItem(THEME_KEY) || 'system'; } catch { /* storage unavailable */ }
+applyTheme(savedTheme);
+$('theme').addEventListener('change', (e) => {
+  const t = (e.target as HTMLSelectElement).value;
+  applyTheme(t);
+  try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
+});
+
+fillStaticOptions();
+bindSettings();
+bindManual();
+bindViews();
+bindChrome();
+syncForm();
+renderFrameList();
+scheduleRedraw();
+
+// expose for automated tests / debugging
+(window as unknown as { lenticulator: unknown }).lenticulator = { state, importFiles, autoAlign, renderPrint, generatePattern };

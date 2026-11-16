@@ -1,0 +1,73 @@
+{
+  "name": "lenticulator",
+  "productName": "Lenticulator",
+  "version": "0.1.0",
+  "description": "Create interlaced images for lenticular prints - in the browser or on the desktop.",
+  "license": "MIT",
+  "author": "AbstractPolygon",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "homepage": "./",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "electron": "44.10.1",
+    "electron-builder": "26.18.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "4.1.12"
+  },
+  "build": {
+    "appId": "com.abstractpolygon.lenticulator",
+    "productName": "Lenticulator",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.graphics-design"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics",
+      "maintainer": "AbstractPolygon <abstractpolygon@users.noreply.github.com>"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AbstractPolygon",
+        "repo": "Lenticulator",
+        "releaseType": "draft"
+      }
+    ]
+  }
+}
