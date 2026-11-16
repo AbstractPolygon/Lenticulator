@@ -35,6 +35,7 @@ The page declares the `downloads` capability (saves go through the host's save p
 - Releases: run the **Desktop builds** workflow with `publish` ticked (or push a `v*` tag); its final job creates
   the public release `v<version>` and uploads all installers. Also add the version to "What's new" in `site/index.html`.
 - The website is also an editable claude.ai artifact: https://claude.ai/artifact/LCSDgkvLEXt6yZ2YjdgnTa
+  **ALWAYS republish it immediately after every change to `site/` (user requirement), just like the app artifact.**
   Build it with `node scripts/build-site-artifact.mjs` and publish `artifact-site/lenticulator-site.html` (declares the
   `artifact` capability). When the user saves edits there, read the artifact and copy its `#page` block back into
   `site/index.html`, then republish both.
