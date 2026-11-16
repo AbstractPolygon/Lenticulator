@@ -1,5 +1,7 @@
 # Lenticulator
 
+**Website:** https://abstractpolygon.github.io/Lenticulator/ · **Try it in your browser:** https://abstractpolygon.github.io/Lenticulator/app/ · **Docs:** [wiki](https://github.com/AbstractPolygon/Lenticulator/wiki)
+
 Create interlaced images for **lenticular prints**: 3D, flip and animation effects. Lenticulator runs in any modern browser and as a desktop app for Windows, macOS and Linux (Electron).
 
 ## Features
@@ -71,7 +73,7 @@ Windows SmartScreen and macOS Gatekeeper will warn on first launch. A Snap built
 
 ### Web version
 
-`npm run build` produces a static site in `dist/` that you can host anywhere. The **Deploy web app** workflow publishes it to GitHub Pages: in the repo settings, set Pages → Source to *GitHub Actions*.
+`npm run build` produces the app as a static site in `dist/` that you can host anywhere. The **Deploy web app** workflow publishes the landing page from `site/` at the root of GitHub Pages and the app under `/app/`.
 
 ## Workflow tips
 

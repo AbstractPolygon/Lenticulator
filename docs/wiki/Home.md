@@ -2,6 +2,8 @@
 
 Lenticulator turns a set of images into an **interlaced print for lenticular lenses**, for 3D (depth) or animation/flip effects. It runs in a web browser and as a desktop app for Windows, macOS and Linux. All processing happens on your computer; images are never uploaded.
 
+**[Website and downloads](https://abstractpolygon.github.io/Lenticulator/)** · **[Open the app in your browser](https://abstractpolygon.github.io/Lenticulator/app/)**
+
 ![Lenticulator with a 3D sample loaded](images/overview.jpg)
 
 ## Pages

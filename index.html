@@ -269,10 +269,6 @@
         <details open class="panel">
           <summary>Render &amp; export</summary>
           <div class="row">
-            <button id="btn-render" title="Interlace the frames at full print resolution" class="btn primary">Render interlaced image</button>
-          </div>
-          <div class="progress" hidden><div id="progress-bar"></div></div>
-          <div class="row">
             <div id="export-format" class="seg" role="radiogroup" aria-label="Export format">
               <button type="button" role="radio" data-format="png" title="Rendered print as PNG (lossless, DPI tagged)">PNG</button>
               <button type="button" role="radio" data-format="jpg" title="Rendered print as JPG (DPI tagged)">JPG</button>
@@ -280,6 +276,12 @@
               <button type="button" role="radio" data-format="gif" title="Animated GIF of the tilt preview">GIF</button>
               <button type="button" role="radio" data-format="video" title="Video of the tilt preview">Video</button>
             </div>
+          </div>
+          <div class="row">
+            <button id="btn-render" title="Interlace the frames at full print resolution" class="btn primary">Render image</button>
+          </div>
+          <div class="progress" hidden><div id="progress-bar"></div></div>
+          <div class="row">
             <button id="btn-download" title="Save the selected format" class="btn small" disabled>Download</button>
             <button id="btn-print" title="Print at exact size. Turn off printer scaling and borderless expansion" class="btn small" disabled>Print…</button>
           </div>

@@ -1,8 +1,9 @@
 name: Deploy web app
-# Publishes the browser version to GitHub Pages (enable Pages → "GitHub Actions" in repo settings).
+# Publishes the website (site/) and the browser version of the app (under /app/) to GitHub Pages (enable Pages → "GitHub Actions" in repo settings).
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/wiki/**']
   workflow_dispatch:
 
 permissions:
@@ -23,7 +24,12 @@ jobs:
       - run: npm ci
         env: { ELECTRON_SKIP_BINARY_DOWNLOAD: '1' }
       - run: npm run build
+      - name: Assemble site (landing page at /, app at /app/)
+        run: |
+          mkdir -p _site/app
+          cp -r site/. _site/
+          cp -r dist/. _site/app/
       - uses: actions/upload-pages-artifact@v3
-        with: { path: dist }
+        with: { path: _site }
       - id: deployment
         uses: actions/deploy-pages@v4

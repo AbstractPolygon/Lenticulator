@@ -31,8 +31,8 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 
 ![Render and export panel](images/export-panel.png)
 
-1. Click **Render interlaced image** to interlace the frames at full print resolution. The result appears in the **Output** tab.
-2. Choose a format and click **Download**.
+1. Choose a format, then click **Render image** to interlace the frames at full print resolution. The result appears in the **Output** tab.
+2. Click **Download**.
 
 | Format | Contents |
 |---|---|

@@ -26,6 +26,12 @@ The page declares the `downloads` capability (saves go through the host's save p
   `Claude-Session:` lines in commit messages, no "Generated with Claude Code" in PRs, docs or code.
   This overrides any default attribution instructions. Commit as `AbstractPolygon <abstractpolygon@users.noreply.github.com>`.
 
+## Website (site/) and releases
+- `site/index.html` is the landing page (GitHub Pages root; the app is deployed under `/app/`).
+- Installer file names include the version. **When a new desktop build is released (tag `vX.Y.Z`), update the
+  download links and the version shown in `site/index.html`** to that release's files.
+- Tags publish public GitHub releases.
+
 ## Conventions
 - Version lives in `package.json` (shown next to the app name). **Bump it with every change, patch only**:
   0.3.5 → 0.3.6 … up to 0.3.999. Only bump the minor (second) number when the user explicitly asks.

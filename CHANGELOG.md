@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.13
+- Export panel: format buttons above the render button; the button now says "Render image".
+- Website (`site/`): landing page with downloads, the browser version under `/app/`, screenshots and docs links.
+- Tagged builds are published as public GitHub releases.
+
 ## 0.3.12
 - Windows: build only the per-architecture installers (x64, arm64), not an extra combined one.
 
