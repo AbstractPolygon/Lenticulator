@@ -1342,7 +1342,6 @@ const setSamplesOpen = bindMenu('btn-samples', 'samples-panel');
 // Bundled sample sets (public/samples), listed from their manifest
 interface Sample { id: string; name: string; mode: Settings['mode']; files: string[] }
 let samples: Sample[] = [];
-let replaceArmed: string | null = null;
 fetch('samples/index.json')
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
   .then((m: { samples: Sample[] }) => {
@@ -1365,13 +1364,6 @@ $('samples-list').addEventListener('click', (e) => {
   const id = (e.target as HTMLElement).closest<HTMLElement>('[data-sample]')?.dataset.sample;
   const sample = samples.find((x) => x.id === id);
   if (!sample || busy) return;
-  if (state.frames.length && replaceArmed !== sample.id) {
-    replaceArmed = sample.id;
-    status('Click again to replace the current frames.');
-    setTimeout(() => { if (replaceArmed === sample.id) replaceArmed = null; }, 4000);
-    return;
-  }
-  replaceArmed = null;
   setSamplesOpen(false);
   loadSample(sample);
 });
