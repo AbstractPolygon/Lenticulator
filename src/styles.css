@@ -22,8 +22,9 @@
     --text: #e8e9ee;
     --muted: #9aa0ae;
     --border: #343743;
-    --accent: #7c6ff0;
-    --accent-text: #ffffff;
+    --accent: #6f93ff;
+    --accent-text: #0b1430;
+    --focus: #9db6ff;
     --danger: #e06666;
     --stage: #0f1013;
     color-scheme: dark;
@@ -36,8 +37,9 @@
   --text: #e8e9ee;
   --muted: #9aa0ae;
   --border: #343743;
-  --accent: #7c6ff0;
-  --accent-text: #ffffff;
+  --accent: #6f93ff;
+  --accent-text: #0b1430;
+  --focus: #9db6ff;
   --danger: #e06666;
   --stage: #0f1013;
   color-scheme: dark;

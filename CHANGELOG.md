@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.22
+- Dark theme: the accent colour is blue instead of violet, matching the website.
+
 ## 0.3.21
 - Video export: set how many times the video tilts back and forth (1–20 loops, default 2), next to the format buttons.
 - The render button now just says "Render".
