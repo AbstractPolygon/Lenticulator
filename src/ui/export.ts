@@ -1,8 +1,9 @@
 import { encodeTiff, setJpegDpi, setPngDpi } from '../core/fileformats';
+import { encodeCanvas } from './canvas';
 
 export interface RenderResult {
+  /** the only copy of the rendered pixels */
   canvas: HTMLCanvasElement;
-  rgba: Uint8ClampedArray;
   width: number;
   height: number;
   dpi: number;
@@ -48,21 +49,19 @@ export async function download(blob: Blob, name: string): Promise<void> {
 }
 
 export async function toPng(r: RenderResult): Promise<Blob> {
-  const blob = await new Promise<Blob | null>((res) => r.canvas.toBlob(res, 'image/png'));
-  if (!blob) throw new Error('PNG encoding failed (image may be too large for this browser)');
-  const tagged = setPngDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi);
-  return new Blob([tagged as BlobPart], { type: 'image/png' });
+  const blob = await encodeCanvas(r.canvas, 'image/png');
+  return new Blob([setPngDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi) as BlobPart], { type: 'image/png' });
 }
 
 export async function toJpeg(r: RenderResult, quality = 0.95): Promise<Blob> {
-  const blob = await new Promise<Blob | null>((res) => r.canvas.toBlob(res, 'image/jpeg', quality));
-  if (!blob) throw new Error('JPEG encoding failed (image may be too large for this browser)');
-  const tagged = setJpegDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi);
-  return new Blob([tagged as BlobPart], { type: 'image/jpeg' });
+  const blob = await encodeCanvas(r.canvas, 'image/jpeg', quality);
+  return new Blob([setJpegDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi) as BlobPart], { type: 'image/jpeg' });
 }
 
 export function toTiff(r: RenderResult): Blob {
-  return new Blob([encodeTiff(r.rgba, r.width, r.height, r.dpi) as BlobPart], { type: 'image/tiff' });
+  // read the pixels back from the canvas only for this export (no second copy kept around)
+  const rgba = r.canvas.getContext('2d')!.getImageData(0, 0, r.width, r.height).data;
+  return new Blob([encodeTiff(rgba, r.width, r.height, r.dpi) as BlobPart], { type: 'image/tiff' });
 }
 
 /**

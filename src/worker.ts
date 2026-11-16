@@ -1,35 +1,33 @@
 /// <reference lib="webworker" />
 /**
- * Background worker: holds full-resolution frame pixels, renders the
- * interlaced print, and runs auto-alignment so the UI stays responsive.
+ * Background worker: renders one band of the interlaced print (several of
+ * these run in parallel, see ui/renderPool.ts), runs auto-alignment and
+ * generates depth views, so the UI stays responsive.
  */
 import { alignFrame, AlignMode, AlignResult, Similarity } from './core/align';
 import type { Gray } from './core/gray';
-import { InterlaceJob, LensParams, Orientation, RGBAImage, lensWeights, renderRows } from './core/interlace';
-import { composePage, PageOptions } from './core/patterns';
+import { InterlaceJob, LensParams, Orientation, isOpaque, lensWeights, renderRows } from './core/interlace';
 import type { Affine } from './core/geometry';
 import { synthesizeViews, ViewParams } from './core/depth3d';
 
 declare const self: DedicatedWorkerGlobalScope;
 
-const frames = new Map<string, RGBAImage>();
-
-export type FrameRef = { id: string } | RGBAImage;
-
 export type WorkerRequest =
-  | { type: 'setFrame'; id: string; width: number; height: number; data: ArrayBuffer }
-  | { type: 'dropFrame'; id: string }
   | {
+      /** render rows [y0, y1) of a width × height print */
       type: 'render';
       reqId: number;
       width: number;
       height: number;
+      y0: number;
+      y1: number;
       orientation: Orientation;
       lens: LensParams;
-      frames: FrameRef[];
+      /** the part of each frame this band samples (pixels transferred) */
+      frames: { width: number; height: number; data: ArrayBuffer }[];
+      /** output pixel → cropped-frame pixel */
       matrices: Affine[];
       background: [number, number, number];
-      page: Omit<PageOptions, 'orientation' | 'lens'>;
     }
   | {
       type: 'synth';
@@ -49,7 +47,7 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'progress'; reqId: number; done: number; total: number }
-  | { type: 'rendered'; reqId: number; width: number; height: number; data: ArrayBuffer }
+  | { type: 'rendered'; reqId: number; y0: number; y1: number; data: ArrayBuffer }
   | { type: 'aligned'; reqId: number; results: { index: number; result: AlignResult }[] }
   | { type: 'views'; reqId: number; width: number; height: number; views: ArrayBuffer[] }
   | { type: 'error'; reqId: number; message: string };
@@ -62,12 +60,6 @@ self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
   const msg = ev.data;
   try {
     switch (msg.type) {
-      case 'setFrame':
-        frames.set(msg.id, { width: msg.width, height: msg.height, data: new Uint8ClampedArray(msg.data) });
-        break;
-      case 'dropFrame':
-        frames.delete(msg.id);
-        break;
       case 'render':
         render(msg);
         break;
@@ -91,12 +83,8 @@ self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
 
 function render(msg: Extract<WorkerRequest, { type: 'render' }>) {
   const imgs = msg.frames.map((f) => {
-    if ('id' in f) {
-      const img = frames.get(f.id);
-      if (!img) throw new Error('Frame data missing in worker');
-      return img;
-    }
-    return f;
+    const data = new Uint8ClampedArray(f.data);
+    return { width: f.width, height: f.height, data, opaque: isOpaque(data) };
   });
   const job: InterlaceJob = {
     width: msg.width,
@@ -107,25 +95,22 @@ function render(msg: Extract<WorkerRequest, { type: 'render' }>) {
     matrices: msg.matrices,
     background: msg.background,
   };
-  const out = new Uint8ClampedArray(msg.width * msg.height * 4);
+  const rows = msg.y1 - msg.y0;
+  const out = new Uint8ClampedArray(msg.width * rows * 4);
   const weights = lensWeights(msg.orientation === 'vertical' ? msg.width : msg.height, job.lens);
-  const band = Math.max(1, Math.floor(2_000_000 / msg.width));
+  const chunk = Math.max(1, Math.floor(1_000_000 / msg.width));
   let last = 0;
-  for (let y = 0; y < msg.height; y += band) {
-    const y1 = Math.min(msg.height, y + band);
-    renderRows(job, y, y1, out.subarray(y * msg.width * 4, y1 * msg.width * 4), weights);
+  for (let y = msg.y0; y < msg.y1; y += chunk) {
+    const y1 = Math.min(msg.y1, y + chunk);
+    renderRows(job, y, y1, out.subarray((y - msg.y0) * msg.width * 4, (y1 - msg.y0) * msg.width * 4), weights);
     const now = Date.now();
     if (now - last > 100) {
-      post({ type: 'progress', reqId: msg.reqId, done: y1, total: msg.height });
+      post({ type: 'progress', reqId: msg.reqId, done: y1 - msg.y0, total: rows });
       last = now;
     }
   }
-  const page = composePage(
-    { width: msg.width, height: msg.height, data: out },
-    { ...msg.page, orientation: msg.orientation, lens: msg.lens },
-  );
-  const buf = page.data.buffer as ArrayBuffer;
-  post({ type: 'rendered', reqId: msg.reqId, width: page.width, height: page.height, data: buf }, [buf]);
+  const buf = out.buffer as ArrayBuffer;
+  post({ type: 'rendered', reqId: msg.reqId, y0: msg.y0, y1: msg.y1, data: buf }, [buf]);
 }
 
 function align(msg: Extract<WorkerRequest, { type: 'align' }>) {

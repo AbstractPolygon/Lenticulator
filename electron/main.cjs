@@ -55,7 +55,9 @@ app.whenReady().then(() => {
     const { pathname } = new URL(req.url);
     const rel = decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html';
     const file = path.normalize(path.join(DIST, rel));
-    if (!file.startsWith(DIST)) return new Response('Forbidden', { status: 403 });
+    // must stay inside dist/ (a bare prefix check would also accept sibling folders like dist-other/)
+    const inside = path.relative(DIST, file);
+    if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) return new Response('Forbidden', { status: 403 });
     return net.fetch(pathToFileURL(file).toString());
   });
 

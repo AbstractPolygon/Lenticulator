@@ -4,7 +4,13 @@ import { Gray, makeGray, sample } from '../src/core/gray';
 import { alignFrame, matchPoint, phaseCorrelate, similarityToParams } from '../src/core/align';
 import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
 import { apply, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
-import { crc32, encodeTiff, getJpegDpi, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
+import { crc32, encodeTiff, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
+
+/** Read the DPI from a JPEG's JFIF header (or null). */
+function getJpegDpi(jpg: Uint8Array): number | null {
+  if (jpg[2] !== 0xff || jpg[3] !== 0xe0 || jpg[13] !== 1) return null;
+  return (jpg[14] << 8) | jpg[15];
+}
 import { composePage, pitchTest } from '../src/core/patterns';
 import { mpoImageRanges } from '../src/core/mpo';
 
@@ -278,5 +284,45 @@ describe('depth → views', () => {
     const g = normalizeDepth(Float32Array.from([0, 5, 10, 100]), 2, 2);
     expect(Math.max(...g.data)).toBeLessThanOrEqual(1);
     expect(Math.min(...g.data)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+import { bandSourceRect, isOpaque } from '../src/core/interlace';
+import { compose as composeM, translate as translateM } from '../src/core/geometry';
+
+describe('banded rendering', () => {
+  // a frame with structure (and a semi-transparent variant) under a rotated, scaled mapping
+  const FW = 120, FH = 90;
+  const mk = (alpha: (i: number) => number) => {
+    const d = new Uint8ClampedArray(FW * FH * 4);
+    for (let i = 0; i < FW * FH; i++) { d[i * 4] = (i * 37) & 255; d[i * 4 + 1] = (i * 11) & 255; d[i * 4 + 2] = (i >> 3) & 255; d[i * 4 + 3] = alpha(i); }
+    return d;
+  };
+  const W = 150, H = 100;
+  const lens = { lpi: 60, dpi: 600, frames: 2, phase: 0.2, reverse: false, sampling: 'blend' as const };
+  const m = frameMatrix({ w: W, h: H }, { w: FW, h: FH }, { w: FW, h: FH }, { dx: 2.5, dy: -1, rotation: 3, scale: 1.05 }, { fit: 'contain', zoom: 0.9, panX: 0.02, panY: 0 });
+
+  for (const [label, data] of [['opaque', mk(() => 255)], ['transparent', mk((i) => (i * 7) & 255)]] as const) {
+    it(`band crops reproduce the full render exactly (${label})`, () => {
+      const full = new Uint8ClampedArray(W * H * 4);
+      const frames = [{ width: FW, height: FH, data }, { width: FW, height: FH, data }];
+      renderRows({ width: W, height: H, orientation: 'vertical', lens, frames, matrices: [m, m], background: [10, 20, 30] }, 0, H, full);
+      const banded = new Uint8ClampedArray(W * H * 4);
+      for (const [y0, y1] of [[0, 33], [33, 67], [67, 100]]) {
+        const r = bandSourceRect(m, W, y0, y1, FW, FH);
+        const crop = new Uint8ClampedArray(r.w * r.h * 4);
+        for (let y = 0; y < r.h; y++) crop.set(data.subarray(((r.y + y) * FW + r.x) * 4, ((r.y + y) * FW + r.x + r.w) * 4), y * r.w * 4);
+        const cm = composeM(translateM(-r.x, -r.y), m);
+        const f = { width: r.w, height: r.h, data: crop, opaque: isOpaque(crop) };
+        const out = banded.subarray(y0 * W * 4, y1 * W * 4);
+        renderRows({ width: W, height: H, orientation: 'vertical', lens, frames: [f, f], matrices: [cm, cm], background: [10, 20, 30] }, y0, y1, out);
+      }
+      expect(banded).toEqual(full);
+    });
+  }
+
+  it('detects opaque pixels', () => {
+    expect(isOpaque(Uint8ClampedArray.from([1, 2, 3, 255, 4, 5, 6, 255]))).toBe(true);
+    expect(isOpaque(Uint8ClampedArray.from([1, 2, 3, 255, 4, 5, 6, 254]))).toBe(false);
   });
 });

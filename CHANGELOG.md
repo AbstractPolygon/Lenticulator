@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.10
+- Faster rendering: the print is interlaced in parallel bands across all CPU cores, each band receiving
+  only the part of every frame it needs; opaque frames skip transparency maths (about 2× faster end to end
+  on 4 cores, output pixel-identical).
+- Lower memory: workers no longer keep full copies of every frame, and a render keeps one copy of its pixels.
+- Smoother views: large photos are drawn from a 2048 px copy when zoomed out; the output view uses a reduced
+  copy when zoomed out; anaglyph overlays reuse their canvases.
+- Fix: opening a project now clears the previous depth map and render.
+- Fix (desktop): the app's file server could read sibling folders whose names start with "dist".
+- Code: shared drawing, canvas, menu and depth-panel modules; dead code removed.
+
 ## 0.3.9
 - Fix: long frame names no longer push the frame buttons out of view.
 

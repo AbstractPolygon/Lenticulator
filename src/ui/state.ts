@@ -80,6 +80,8 @@ export interface Frame {
   /** original encoded bytes (kept for project save) */
   blob: Blob;
   bitmap: ImageBitmap;
+  /** downscaled copy for on-screen drawing (null when the image is already small) */
+  preview?: ImageBitmap | null;
   width: number;
   height: number;
   thumb: string;

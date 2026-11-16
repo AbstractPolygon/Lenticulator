@@ -25,8 +25,6 @@ export interface AlignResult extends Similarity {
   confidence: number;
 }
 
-export const IDENTITY: Similarity = { tx: 0, ty: 0, a: 0, b: 0 };
-
 export function similarityToParams(s: Similarity): { dx: number; dy: number; rotation: number; scale: number } {
   return {
     dx: s.tx,
@@ -34,11 +32,6 @@ export function similarityToParams(s: Similarity): { dx: number; dy: number; rot
     rotation: (Math.atan2(s.b, 1 + s.a) * 180) / Math.PI,
     scale: Math.hypot(1 + s.a, s.b),
   };
-}
-
-export function paramsToSimilarity(p: { dx: number; dy: number; rotation: number; scale: number }): Similarity {
-  const th = (p.rotation * Math.PI) / 180;
-  return { tx: p.dx, ty: p.dy, a: p.scale * Math.cos(th) - 1, b: p.scale * Math.sin(th) };
 }
 
 // ---------------------------------------------------------------------------

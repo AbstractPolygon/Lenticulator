@@ -144,11 +144,6 @@ export function setJpegDpi(jpg: Uint8Array, dpi: number): Uint8Array {
   return out;
 }
 
-/** Read the DPI from a JPEG's JFIF header (or null). */
-export function getJpegDpi(jpg: Uint8Array): number | null {
-  if (jpg[2] !== 0xff || jpg[3] !== 0xe0 || jpg[13] !== 1) return null;
-  return (jpg[14] << 8) | jpg[15];
-}
 
 /** A single-file ZIP archive (stored, no compression). */
 export function zipStore(name: string, data: Uint8Array): Uint8Array {

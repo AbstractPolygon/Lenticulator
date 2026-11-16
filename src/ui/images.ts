@@ -1,4 +1,5 @@
 import { mpoImageRanges } from '../core/mpo';
+import { canvas2d } from './canvas';
 
 /** Image import helpers. */
 
@@ -56,24 +57,9 @@ export async function decode(blob: Blob): Promise<ImageBitmap> {
 
 export function thumbnail(bmp: ImageBitmap, max = 160): string {
   const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.round(bmp.width * s));
-  c.height = Math.max(1, Math.round(bmp.height * s));
-  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+  const { c, ctx } = canvas2d(bmp.width * s, bmp.height * s);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
   return c.toDataURL('image/jpeg', 0.8);
-}
-
-/** Full-resolution RGBA pixels (capped so huge photos don't exhaust memory). */
-export function pixels(bmp: ImageBitmap, maxDim = 8192): ImageData {
-  const s = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
-  const w = Math.max(1, Math.round(bmp.width * s));
-  const h = Math.max(1, Math.round(bmp.height * s));
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(bmp, 0, 0, w, h);
-  return ctx.getImageData(0, 0, w, h);
 }
 
 export function uid(): string {

@@ -9,17 +9,19 @@ import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
 import {
   AppState, Frame, MODE_DEFAULTS, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
 } from './ui/state';
-import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
-import { WorkerClient } from './ui/workerClient';
-import { RawImage, decodeSpecial, sniffBlob } from './ui/decoders';
+import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, splitMultiPicture, thumbnail, uid } from './ui/images';
+import { decodeSpecial, sniffBlob } from './ui/decoders';
 import { Rect, ViewState } from './ui/view';
-import type { FrameRef, WorkerResponse } from './worker';
+import type { WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
 import { zipStore } from './core/fileformats';
-import { framesForLens, modelInputSize } from './core/depth3d';
-import type { Gray } from './core/gray';
-import type { DepthRequest, DepthResponse } from './depthWorker';
+import { framesForLens } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
+import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
+import { CompareMode, drawCompare, drawTilt as drawTiltFrames } from './ui/draw';
+import { PoolFrame, RenderPool, newRenderWorker } from './ui/renderPool';
+import { bindMenu, bindPref } from './ui/menus';
+import { initDepthPanel } from './ui/depthPanel';
 
 // ---------------------------------------------------------------------------
 // State
@@ -34,7 +36,10 @@ const state: AppState = {
 };
 let result: RenderResult | null = null;
 let busy = false;
-const worker = new WorkerClient();
+/** worker for alignment and depth views; also the first worker of the render pool */
+const worker = newRenderWorker();
+const pool = new RenderPool(undefined, worker);
+let depthPanel: ReturnType<typeof initDepthPanel> | null = null;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const S = () => state.settings;
@@ -62,7 +67,7 @@ function progress(frac: number | null) {
 function setBusy(b: boolean) {
   busy = b;
   for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern', 'btn-depth-estimate', 'btn-depth-load']) ($(id) as HTMLButtonElement).disabled = b;
-  ($('btn-depth-generate') as HTMLButtonElement).disabled = b || !depthSource;
+  ($('btn-depth-generate') as HTMLButtonElement).disabled = b || !depthPanel?.hasSource();
   updateExportButtons();
 }
 
@@ -125,7 +130,7 @@ function syncForm() {
       (Math.abs(p.h - s.widthIn) < 1e-3 && Math.abs(p.w - s.heightIn) < 1e-3),
   );
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
-  document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
+  document.querySelectorAll<HTMLButtonElement>('#effect-mode [data-mode]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
   const is3d = s.mode === '3d';
   // anaglyph only makes sense for 3D; the comparison overlays work for both
@@ -148,7 +153,7 @@ function bindSettings() {
     const n = parseFloat(v);
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
-  document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
+  document.querySelectorAll<HTMLButtonElement>('#effect-mode [data-mode]').forEach((b) =>
     b.addEventListener('click', () => {
       const mode = b.dataset.mode as Settings['mode'];
       if (mode === S().mode) return;
@@ -198,8 +203,8 @@ function bindSettings() {
   on('d-frames', 'change', (el) => (S().depthFrames = Math.max(2, Math.min(48, Math.round(+el.value) || 2))));
   on('d-auto', 'change', (el) => (S().depthAuto = el.checked));
   on('d-amount', 'input', (el) => (S().depthAmount = +el.value));
-  on('d-focus', 'input', (el) => { S().depthFocus = +el.value; drawDepthThumb(); });
-  on('d-invert', 'change', (el) => { S().depthInvert = el.checked; drawDepthThumb(); });
+  on('d-focus', 'input', (el) => { S().depthFocus = +el.value; depthPanel?.drawThumb(); });
+  on('d-invert', 'change', (el) => { S().depthInvert = el.checked; depthPanel?.drawThumb(); });
   on('tiff-import', 'change', (el) => (S().tiffAllPages = el.value === 'all'));
 }
 
@@ -269,13 +274,13 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
         const raws = await decodeSpecial(file, kind, { psdLayers: S().psdLayers, tiffAllPages: S().tiffAllPages });
         if (raws.length === 1) {
           // keep the original file (smaller project files); it is decoded again on load
-          await addFrame(file, baseName, NO_TRANSFORM, true, await rawToBitmap(raws[0]));
+          await addFrame(file, baseName, NO_TRANSFORM, true, await rgbaToBitmap(raws[0].data, raws[0].width, raws[0].height));
           added++;
         } else {
           // pages / layers become separate lossless PNG frames
           for (let p = 0; p < raws.length; p++) {
-            const bmp = await rawToBitmap(raws[p]);
-            await addFrame(await bitmapToPng(bmp), `${baseName} [${raws[p].name ?? p + 1}]`, NO_TRANSFORM, true, bmp);
+            const bmp = await rgbaToBitmap(raws[p].data, raws[p].width, raws[p].height);
+            await addFrame(await encodeBitmap(bmp, 'image/png'), `${baseName} [${raws[p].name ?? p + 1}]`, NO_TRANSFORM, true, bmp);
             added++;
           }
         }
@@ -300,20 +305,6 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
   scheduleRedraw();
 }
 
-async function rawToBitmap(r: RawImage): Promise<ImageBitmap> {
-  return createImageBitmap(new ImageData(r.data as Uint8ClampedArray<ArrayBuffer>, r.width, r.height));
-}
-
-async function bitmapToPng(bmp: ImageBitmap): Promise<Blob> {
-  const c = document.createElement('canvas');
-  c.width = bmp.width;
-  c.height = bmp.height;
-  c.getContext('2d')!.drawImage(bmp, 0, 0);
-  const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
-  if (!blob) throw new Error('could not convert the image');
-  return blob;
-}
-
 /** Decode any supported file (used for project reloads, where frames keep their original bytes). */
 async function decodeAny(blob: Blob, name: string): Promise<ImageBitmap> {
   const kind = await sniffBlob(blob, name);
@@ -323,7 +314,7 @@ async function decodeAny(blob: Blob, name: string): Promise<ImageBitmap> {
     if (native) return native;
   }
   const [first] = await decodeSpecial(blob, kind, { psdLayers: false, tiffAllPages: false });
-  return rawToBitmap(first);
+  return rgbaToBitmap(first.data, first.width, first.height);
 }
 
 async function addFrame(
@@ -337,31 +328,39 @@ async function addFrame(
     bitmap,
     width: bitmap.width,
     height: bitmap.height,
+    // small copy for fast on-screen drawing; the render reads the full-resolution bitmap
+    preview: await proxyBitmap(bitmap),
     thumb: thumbnail(bitmap),
     transform: { ...transform },
     enabled,
   };
-  const px = pixels(bitmap);
-  // the worker samples full-res pixels; scale the transform if we capped the size
-  worker.send({ type: 'setFrame', id: frame.id, width: px.width, height: px.height, data: px.data.buffer }, [px.data.buffer]);
-  workerSizes.set(frame.id, { w: px.width, h: px.height });
   state.frames.push(frame);
   if (!state.refId) state.refId = frame.id;
   if (!state.selectedId) state.selectedId = frame.id;
   return frame;
 }
-/** dimensions of the pixel copy held by the worker (may be capped) */
-const workerSizes = new Map<string, { w: number; h: number }>();
 
 function removeFrame(id: string) {
   const i = state.frames.findIndex((f) => f.id === id);
   if (i < 0) return;
   state.frames[i].bitmap.close();
+  state.frames[i].preview?.close();
   state.frames.splice(i, 1);
-  worker.send({ type: 'dropFrame', id });
-  workerSizes.delete(id);
   if (state.refId === id) state.refId = state.frames[0]?.id ?? null;
   if (state.selectedId === id) state.selectedId = state.frames[Math.min(i, state.frames.length - 1)]?.id ?? null;
+}
+
+/** Replace all frames (used by generated depth views). */
+async function replaceFrames(items: { blob: Blob; name: string; bitmap: ImageBitmap; transform?: FrameTransform }[], refIndex: number) {
+  for (const f of [...state.frames]) removeFrame(f.id);
+  state.keyPoint = null;
+  for (const it of items) await addFrame(it.blob, it.name, it.transform ?? NO_TRANSFORM, true, it.bitmap);
+  state.refId = state.frames[refIndex]?.id ?? state.frames[0]?.id ?? null;
+  state.selectedId = state.refId;
+  renderFrameList();
+  updateLensInfo();
+  scheduleRedraw();
+  showTab('preview');
 }
 
 function refFrame(): Frame | undefined {
@@ -554,56 +553,20 @@ function drawPreview() {
   ctx.clip();
   const ordered = s.reverse ? [...frames].reverse() : frames;
   const pos = viewT * (ordered.length - 1);
-  const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
-  const t = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
-  const draw = (f: Frame, alpha: number, op: GlobalCompositeOperation = 'source-over') => {
-    const m = previewMatrix(f, out);
-    // canvas px ← print px ← frame px
-    ctx.setTransform(...compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(m)));
-    ctx.globalAlpha = alpha;
-    ctx.globalCompositeOperation = op;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(f.bitmap, 0, 0);
-  };
+  // canvas px ← print px ← frame px
+  const toCanvas = (f: Frame) => compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(previewMatrix(f, out)));
   const pmode = $<HTMLSelectElement>('preview-mode').value;
-  // comparison overlays: frame at the current view angle vs the reference frame (★)
-  const cur = ordered[Math.round(pos)];
-  const ref = refFrame() ?? ordered[0];
   if (pmode === 'onion' || pmode === 'difference' || pmode === 'flicker') {
-    if (pmode === 'flicker') draw(flickerOn ? cur : ref, 1);
-    else {
-      draw(ref, 1);
-      draw(cur, pmode === 'onion' ? 0.5 : 1, pmode === 'difference' ? 'difference' : 'source-over');
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    // frame at the current view angle vs the reference frame (★)
+    const ref = refFrame() ?? ordered[0];
+    drawCompare(ctx, pmode, ref, ordered[Math.round(pos)], toCanvas, { flickerOn, opacity: 0.5, w, h });
   } else if (s.mode === '3d' && pmode === 'anaglyph' && ordered.length > 1) {
     // left eye sees an earlier frame than the right eye; spacing ≈ a quarter of the sequence
     const sep = Math.max(1, Math.round((ordered.length - 1) / 4));
     const li = Math.min(Math.max(0, Math.round(pos - sep / 2)), ordered.length - 1 - sep);
-    const eye = (f: Frame, color: string) => {
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const x = c.getContext('2d')!;
-      x.fillStyle = s.background;
-      x.fillRect(r.x, r.y, r.w, r.h);
-      x.setTransform(...compose([1, 0, 0, 1, r.x, r.y], scale(r.s), invert(previewMatrix(f, out))));
-      x.imageSmoothingQuality = 'high';
-      x.drawImage(f.bitmap, 0, 0);
-      x.setTransform(1, 0, 0, 1, 0, 0);
-      x.globalCompositeOperation = 'multiply';
-      x.fillStyle = color;
-      x.fillRect(0, 0, w, h);
-      return c;
-    };
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(eye(ordered[li], '#ff0000'), 0, 0);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(eye(ordered[li + sep], '#00ffff'), 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
+    drawCompare(ctx, 'anaglyph', ordered[li], ordered[li + sep], toCanvas, { w, h, clip: r, background: s.background });
   } else {
-    draw(ordered[i0], 1);
-    if (t > 0.001) draw(ordered[i1], t);
+    drawTiltFrames(ctx, ordered, pos, $<HTMLInputElement>('preview-blend').checked, toCanvas);
   }
   ctx.restore();
 }
@@ -638,36 +601,9 @@ function drawAlign() {
   ctx.rect(r.x, r.y, r.w, r.h);
   ctx.clip();
   const sel = selFrame() ?? ref;
-  const mode = $<HTMLSelectElement>('overlay-mode').value;
+  const mode = $<HTMLSelectElement>('overlay-mode').value as CompareMode;
   const opacity = +$<HTMLInputElement>('overlay-opacity').value;
-  const draw = (f: Frame, alpha = 1, op: GlobalCompositeOperation = 'source-over') => {
-    ctx.setTransform(...alignViewMatrix(f, r));
-    ctx.globalAlpha = alpha;
-    ctx.globalCompositeOperation = op;
-    ctx.drawImage(f.bitmap, 0, 0);
-  };
-  if (mode === 'frame') draw(sel);
-  else if (mode === 'flicker') draw(flickerOn ? sel : ref);
-  else if (mode === 'difference') { draw(ref); draw(sel, 1, 'difference'); }
-  else if (mode === 'anaglyph') {
-    // red from reference, cyan from selected
-    const tmp = (f: Frame, color: string) => {
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const x = c.getContext('2d')!;
-      x.setTransform(...alignViewMatrix(f, r));
-      x.drawImage(f.bitmap, 0, 0);
-      x.setTransform(1, 0, 0, 1, 0, 0);
-      x.globalCompositeOperation = 'multiply';
-      x.fillStyle = color;
-      x.fillRect(0, 0, w, h);
-      return c;
-    };
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(tmp(ref, '#ff0000'), 0, 0);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(tmp(sel, '#00ffff'), 0, 0);
-  } else { draw(ref); draw(sel, opacity); }
+  drawCompare(ctx, mode, ref, sel, (f: Frame) => alignViewMatrix(f, r), { opacity, flickerOn, w, h });
   ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
@@ -934,10 +870,7 @@ function setPicking(on: boolean) {
 const ANALYSIS_MAX = 768;
 
 function analysisGray(f: Frame, ref: Frame, aw: number, ah: number) {
-  const c = document.createElement('canvas');
-  c.width = aw;
-  c.height = ah;
-  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  const { ctx } = canvas2d(aw, ah, true);
   const sa = aw / ref.width;
   // analysis ← ref ← frame (base mapping only, no alignment)
   ctx.setTransform(...compose(scale(sa), invert(baseMap({ w: ref.width, h: ref.height }, { w: f.width, h: f.height }))));
@@ -1007,14 +940,8 @@ async function autoAlign() {
 // Render / patterns / export
 // ---------------------------------------------------------------------------
 
-async function runRender(
-  frames: FrameRef[],
-  matrices: Affine[],
-  title: string,
-  fileBase: string,
-  overrides: Partial<Settings> = {},
-) {
-  const s = { ...S(), ...overrides };
+async function runRender(frames: Omit<PoolFrame, 'matrix'>[], matrices: Affine[], title: string, fileBase: string) {
+  const s = S();
   const { w, h } = outputPixels(s);
   if (w * h > 400e6) throw new Error(`Output of ${w}×${h} px is too large. Lower the DPI or size.`);
   setBusy(true);
@@ -1022,22 +949,17 @@ async function runRender(
   status(`Rendering ${w}×${h}…`, 'info', 60000);
   const t0 = performance.now();
   try {
-    const res = await worker.request<Extract<WorkerResponse, { type: 'rendered' }>>(
-      (reqId) => ({
-        type: 'render', reqId, width: w, height: h, orientation: s.orientation,
-        lens: { lpi: s.lpi, dpi: s.dpi, frames: frames.length, phase: s.phase, reverse: s.reverse, sampling: s.sampling },
-        frames, matrices, background: hexToRgb(s.background),
-        page: { margin: s.marginIn * s.dpi, alignBars: s.alignBars, cropMarks: s.cropMarks },
-      }),
-      [],
-      (d, t) => progress(d / t),
-    );
-    const rgba = new Uint8ClampedArray(res.data);
-    const canvas = document.createElement('canvas');
-    canvas.width = res.width;
-    canvas.height = res.height;
-    canvas.getContext('2d')!.putImageData(new ImageData(rgba, res.width, res.height), 0, 0);
-    setResult({ canvas, rgba, width: res.width, height: res.height, dpi: s.dpi, title, fileBase });
+    const page = await pool.render({
+      width: w, height: h, orientation: s.orientation,
+      lens: { lpi: s.lpi, dpi: s.dpi, frames: frames.length, phase: s.phase, reverse: s.reverse, sampling: s.sampling },
+      frames: frames.map((f, i) => ({ ...f, matrix: matrices[i] })),
+      background: hexToRgb(s.background),
+      page: { margin: s.marginIn * s.dpi, alignBars: s.alignBars, cropMarks: s.cropMarks },
+    }, progress);
+    const { c: canvas, ctx } = canvas2d(page.width, page.height);
+    ctx.putImageData(new ImageData(page.data as Uint8ClampedArray<ArrayBuffer>, page.width, page.height), 0, 0);
+    // the pixels now live only in the canvas (TIFF export reads them back when needed)
+    setResult({ canvas, width: page.width, height: page.height, dpi: s.dpi, title, fileBase });
     status(`Rendered in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
   } finally {
     setBusy(false);
@@ -1050,16 +972,11 @@ async function renderPrint() {
   if (frames.length < 2) return status('Need at least two enabled frames.', 'error');
   const ref = refFrame()!;
   const out = outputPixels(S());
-  const matrices = frames.map((f) => {
-    // map into the worker's (possibly downscaled) pixel copy
-    const ws = workerSizes.get(f.id)!;
-    const m = frameMatrix(out, { w: ref.width, h: ref.height }, { w: f.width, h: f.height }, f.transform, framing(S()));
-    return compose(scale(ws.w / f.width, ws.h / f.height), m);
-  });
   const s = S();
   try {
     await runRender(
-      frames.map((f) => ({ id: f.id })), matrices,
+      frames.map((f) => ({ source: f.bitmap, width: f.width, height: f.height })),
+      frames.map((f) => frameMatrix(out, { w: ref.width, h: ref.height }, { w: f.width, h: f.height }, f.transform, framing(s))),
       `Interlaced · ${frames.length} frames · ${s.lpi} LPI · ${s.dpi} DPI`,
       `lenticular_${s.lpi}lpi_${s.dpi}dpi`,
     );
@@ -1070,10 +987,7 @@ async function renderPrint() {
 }
 
 function patternToCanvas(p: Pattern): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = p.image.width;
-  c.height = p.image.height;
-  const ctx = c.getContext('2d')!;
+  const { c, ctx } = canvas2d(p.image.width, p.image.height);
   ctx.putImageData(new ImageData(p.image.data as Uint8ClampedArray<ArrayBuffer>, p.image.width, p.image.height), 0, 0);
   ctx.fillStyle = '#000';
   ctx.textBaseline = 'middle';
@@ -1106,9 +1020,8 @@ async function generatePattern() {
         ? pitchTest({ dpi: s.dpi, lpi: s.lpi, range, step, widthPx: w, heightPx: h, orientation: s.orientation })
         : lensRuler({ dpi: s.dpi, lpi: s.lpi, widthPx: w, heightPx: h, orientation: s.orientation });
       const canvas = patternToCanvas(p);
-      const rgba = canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
       setResult({
-        canvas, rgba, width: w, height: h, dpi: s.dpi,
+        canvas, width: w, height: h, dpi: s.dpi,
         title: type === 'pitch' ? `Pitch test ${s.lpi - range}–${s.lpi + range} LPI (step ${step})` : `Lens ruler ${s.lpi} LPI`,
         fileBase: type === 'pitch' ? `pitch_test_${s.lpi}lpi_${s.dpi}dpi` : `lens_ruler_${s.lpi}lpi_${s.dpi}dpi`,
       });
@@ -1117,11 +1030,9 @@ async function generatePattern() {
       const n = Math.max(2, Math.min(64, parseInt($<HTMLInputElement>('ft-count').value) || 6));
       // small synthetic frames: coloured field, big number, and an arrow that points to the frame's position
       const fw = 600, fh = Math.round((600 * h) / w) || 400;
-      const frames: FrameRef[] = [];
+      const frames: Omit<PoolFrame, 'matrix'>[] = [];
       for (let i = 0; i < n; i++) {
-        const c = document.createElement('canvas');
-        c.width = fw; c.height = fh;
-        const x = c.getContext('2d')!;
+        const { c, ctx: x } = canvas2d(fw, fh);
         const [r, g, b] = frameColor(i, n);
         x.fillStyle = `rgb(${r},${g},${b})`;
         x.fillRect(0, 0, fw, fh);
@@ -1134,8 +1045,7 @@ async function generatePattern() {
         x.fillText(`frame ${i + 1} of ${n}`, fw / 2, fh * 0.85);
         // position marker bar
         x.fillRect((i / n) * fw, fh * 0.94, fw / n, fh * 0.06);
-        const id = x.getImageData(0, 0, fw, fh);
-        frames.push({ width: fw, height: fh, data: id.data });
+        frames.push({ source: c, width: fw, height: fh });
       }
       const out = outputPixels(s);
       const m = frameMatrix(out, { w: fw, h: fh }, { w: fw, h: fh }, NO_TRANSFORM, { fit: 'cover', zoom: 1, panX: 0, panY: 0 });
@@ -1148,8 +1058,26 @@ async function generatePattern() {
   }
 }
 
-function setResult(r: RenderResult) {
+/** reduced copy of the current render for drawing it zoomed out (long side ≤ 3072 px) */
+let resultThumb: { canvas: HTMLCanvasElement; scale: number } | null = null;
+
+function setResult(r: RenderResult | null) {
   result = r;
+  resultThumb = null;
+  if (!r) {
+    ($('btn-print') as HTMLButtonElement).disabled = true;
+    $('output-title').textContent = '';
+    updateExportButtons();
+    drawOutput();
+    return;
+  }
+  const k = Math.min(1, 3072 / Math.max(r.width, r.height));
+  if (k < 1) {
+    const { c, ctx } = canvas2d(r.width * k, r.height * k);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(r.canvas, 0, 0, c.width, c.height);
+    resultThumb = { canvas: c, scale: c.width / r.width };
+  }
   ($('btn-print') as HTMLButtonElement).disabled = false;
   updateExportButtons();
   $('output-title').textContent =
@@ -1173,7 +1101,9 @@ function drawOutput() {
   // show individual print dots crisply once they are bigger than a screen pixel
   ctx.imageSmoothingEnabled = r.s < 1;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(result.canvas, r.x, r.y, r.w, r.h);
+  // zoomed out: the reduced copy is sharp enough and far cheaper to scale on every pan/zoom
+  const src = resultThumb && r.s <= resultThumb.scale ? resultThumb.canvas : result.canvas;
+  ctx.drawImage(src, r.x, r.y, r.w, r.h);
 }
 
 /** Tilt preview at an arbitrary size (for GIF / video export). */
@@ -1184,21 +1114,9 @@ const drawTilt: DrawFn = (ctx, W, H, t) => {
   ctx.globalAlpha = 1;
   ctx.fillStyle = s.background;
   ctx.fillRect(0, 0, W, H);
-  if (!ordered.length) return;
   const out = outputPixels(s);
-  const pos = t * (ordered.length - 1);
-  const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
-  const frac = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
-  const draw = (f: Frame, alpha: number) => {
-    ctx.setTransform(...compose(scale(W / out.w, H / out.h), invert(previewMatrix(f, out))));
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(f.bitmap, 0, 0);
-  };
-  draw(ordered[i0], 1);
-  if (frac > 0.001) draw(ordered[i1], frac);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
+  drawTiltFrames(ctx, ordered, t * (ordered.length - 1), $<HTMLInputElement>('preview-blend').checked,
+    (f: Frame) => compose(scale(W / out.w, H / out.h), invert(previewMatrix(f, out))));
 };
 
 async function exportAnimation(kind: 'gif' | 'video') {
@@ -1297,6 +1215,9 @@ async function openProject(file: File) {
     const proj = JSON.parse(await file.text()) as ProjectFile;
     if (proj.app !== 'lenticulator') throw new Error('Not a Lenticulator project');
     for (const f of [...state.frames]) removeFrame(f.id);
+    // nothing from the previous project may leak into this one
+    depthPanel?.reset();
+    setResult(null);
     state.settings = { ...loadSettings(), ...proj.settings };
     saveSettings(S());
     for (const f of proj.frames) await addFrame(base64ToBlob(f.data, f.type), f.name, f.transform, f.enabled);
@@ -1419,20 +1340,9 @@ function escapeHtml(s: string) {
 // ---------------------------------------------------------------------------
 
 // Theme: "system" follows the OS (prefers-color-scheme); others override it.
-const THEME_KEY = 'lenticulator.theme';
-function applyTheme(t: string) {
-  document.documentElement.dataset.theme = t;
-  $<HTMLSelectElement>('theme').value = t;
-}
-// default to a theme the host page already set (e.g. an embedding viewer), else follow the OS
-let savedTheme = document.documentElement.dataset.theme || 'system';
-try { savedTheme = localStorage.getItem(THEME_KEY) || savedTheme; } catch { /* storage unavailable */ }
-applyTheme(savedTheme);
-$('theme').addEventListener('change', (e) => {
-  const t = (e.target as HTMLSelectElement).value;
-  applyTheme(t);
-  try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
-});
+// Default to a theme the host page already set (e.g. an embedding viewer).
+bindPref($<HTMLSelectElement>('theme'), 'theme', document.documentElement.dataset.theme || 'system',
+  (t) => (document.documentElement.dataset.theme = t));
 
 if (!videoFormat()) {
   $<HTMLElement>('export-format').querySelector<HTMLElement>('[data-format=video]')!.hidden = true;
@@ -1445,43 +1355,15 @@ if (inArtifactHost()) {
 }
 
 // Control panel side (per-device preference, like the theme)
-const PANEL_KEY = 'lenticulator.panelSide';
-function applyPanelSide(side: string) {
+bindPref($<HTMLSelectElement>('panel-side'), 'panelSide', 'left', (side) => {
   document.querySelector('.layout')!.classList.toggle('panel-right', side === 'right');
-  $<HTMLSelectElement>('panel-side').value = side === 'right' ? 'right' : 'left';
   scheduleRedraw();
-}
-let savedSide = 'left';
-try { savedSide = localStorage.getItem(PANEL_KEY) || 'left'; } catch { /* storage unavailable */ }
-applyPanelSide(savedSide);
-$('panel-side').addEventListener('change', (e) => {
-  const side = (e.target as HTMLSelectElement).value;
-  applyPanelSide(side);
-  try { localStorage.setItem(PANEL_KEY, side); } catch { /* ignore */ }
 });
 
-// Top-bar popup menus
-function bindMenu(btnId: string, panelId: string) {
-  const btn = $(btnId);
-  const panel = $(panelId);
-  const setOpen = (open: boolean) => {
-    panel.hidden = !open;
-    btn.setAttribute('aria-expanded', String(open));
-    if (open) panel.querySelector<HTMLElement>('select, input, button')?.focus();
-  };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden !== false); });
-  document.addEventListener('pointerdown', (e) => {
-    if (!panel.hidden && !panel.contains(e.target as Node) && !btn.contains(e.target as Node)) setOpen(false);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); }
-  });
-  return setOpen;
-}
-bindMenu('btn-settings', 'settings-panel');
-bindMenu('btn-about', 'about-panel');
+bindMenu($('btn-settings'), $('settings-panel'));
+bindMenu($('btn-about'), $('about-panel'));
 $('about-version').textContent = `v${__APP_VERSION__}`;
-const setSamplesOpen = bindMenu('btn-samples', 'samples-panel');
+const setSamplesOpen = bindMenu($('btn-samples'), $('samples-panel'));
 
 // Bundled sample sets (public/samples), listed from their manifest
 interface Sample { id: string; name: string; mode: Settings['mode']; files: string[] }
@@ -1537,166 +1419,19 @@ async function loadSample(sample: Sample) {
 $('app-version').textContent = `v${__APP_VERSION__}`;
 document.title = `Lenticulator ${__APP_VERSION__}`;
 
-// ---------------------------------------------------------------------------
-// Depth from a single photo → generated 3D views
-// ---------------------------------------------------------------------------
-
-/** Source photo and its depth (disparity, 1 = near) used to generate views. */
-let depthSource: { name: string; bitmap: ImageBitmap; depth: Gray } | null = null;
-let depthWorker: Worker | null = null;
-let depthReq = 0;
-
-function estimateDepthIn(rgba: ImageData, onProgress: (stage: string, f: number) => void): Promise<Gray> {
-  depthWorker ??= new Worker(new URL('./depthWorker.ts', import.meta.url), { type: 'module' });
-  const reqId = ++depthReq;
-  const modelBase = new URL('models/depth-anything-v2-small/', location.href).href;
-  return new Promise((resolve, reject) => {
-    const w = depthWorker!;
-    const onMsg = (ev: MessageEvent<DepthResponse>) => {
-      const m = ev.data;
-      if (m.reqId !== reqId) return;
-      if (m.type === 'progress') onProgress(m.stage, m.done / m.total);
-      else {
-        w.removeEventListener('message', onMsg);
-        if (m.type === 'error') reject(new Error(m.message));
-        else resolve({ w: m.width, h: m.height, data: new Float32Array(m.data) });
-      }
-    };
-    w.addEventListener('message', onMsg);
-    w.onerror = (e) => { w.removeEventListener('message', onMsg); depthWorker = null; reject(new Error(e.message || 'depth worker failed')); };
-    const msg: DepthRequest = { type: 'estimate', reqId, modelBase, width: rgba.width, height: rgba.height, data: rgba.data.buffer as ArrayBuffer };
-    w.postMessage(msg, [msg.data]);
-  });
-}
-
-function bitmapPixels(bmp: ImageBitmap, w: number, h: number): ImageData {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const x = c.getContext('2d', { willReadFrequently: true })!;
-  x.imageSmoothingQuality = 'high';
-  x.drawImage(bmp, 0, 0, w, h);
-  return x.getImageData(0, 0, w, h);
-}
-
-function drawDepthThumb() {
-  const c = $<HTMLCanvasElement>('depth-thumb');
-  c.hidden = !depthSource;
-  if (!depthSource) return;
-  const { depth } = depthSource;
-  c.width = depth.w;
-  c.height = depth.h;
-  const img = c.getContext('2d')!.createImageData(depth.w, depth.h);
-  const inv = S().depthInvert, focus = S().depthFocus;
-  for (let i = 0; i < depth.data.length; i++) {
-    const v = inv ? 1 - depth.data[i] : depth.data[i];
-    const g = Math.round(v * 255);
-    // tint the focus plane so it's visible where the print surface will be
-    const near = Math.abs(v - focus) < 0.015;
-    img.data[i * 4] = near ? 255 : g;
-    img.data[i * 4 + 1] = near ? 200 : g;
-    img.data[i * 4 + 2] = near ? 0 : g;
-    img.data[i * 4 + 3] = 255;
-  }
-  c.getContext('2d')!.putImageData(img, 0, 0);
-  ($('btn-depth-generate') as HTMLButtonElement).disabled = busy;
-}
-
-async function estimateDepth() {
-  const f = selFrame() ?? state.frames[0];
-  if (!f) return status('Select a photo first.', 'error');
-  setBusy(true);
-  progress(0);
-  try {
-    status('Loading depth model…', 'info', 120000);
-    const size = modelInputSize(f.width, f.height);
-    const depth = await estimateDepthIn(bitmapPixels(f.bitmap, size.w, size.h), (stage, fr) => {
-      if (stage === 'download') progress(fr);
-      else { progress(null); status('Estimating depth…', 'info', 120000); }
-    });
-    depthSource?.bitmap.close();
-    depthSource = { name: f.name, bitmap: await createImageBitmap(f.bitmap), depth };
-    drawDepthThumb();
-    status('Depth ready.');
-  } catch (e) {
-    status(`Depth estimation failed: ${(e as Error).message}`, 'error', 8000);
-  } finally {
-    setBusy(false);
-    progress(null);
-  }
-}
-
-async function loadDepthMap(file: File) {
-  const f = selFrame() ?? state.frames[0];
-  if (!f) return status('Select a photo first.', 'error');
-  try {
-    const bmp = await decodeAny(file, file.name);
-    const s = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
-    const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
-    const px = bitmapPixels(bmp, w, h);
-    bmp.close();
-    depthSource?.bitmap.close();
-    depthSource = { name: f.name, bitmap: await createImageBitmap(f.bitmap), depth: rgbaToGray(px.data, w, h) };
-    drawDepthThumb();
-  } catch (e) {
-    status(`Could not open ${file.name}: ${(e as Error).message}`, 'error', 6000);
-  }
-}
-
-async function generateFromDepth() {
-  if (!depthSource || busy) return;
-  const s = S();
-  const n = s.depthAuto ? framesForLens(s.lpi, s.dpi) : s.depthFrames;
-  const src = depthSource;
-  const k = Math.min(1, 2048 / Math.max(src.bitmap.width, src.bitmap.height));
-  const w = Math.round(src.bitmap.width * k), h = Math.round(src.bitmap.height * k);
-  setBusy(true);
-  status(`Generating ${n} frames…`, 'info', 120000);
-  try {
-    const px = bitmapPixels(src.bitmap, w, h);
-    const res = await worker.request<Extract<WorkerResponse, { type: 'views' }>>(
-      (reqId) => ({
-        type: 'synth', reqId,
-        image: { width: w, height: h, data: px.data.buffer as ArrayBuffer },
-        depth: { w: src.depth.w, h: src.depth.h, data: src.depth.data.slice().buffer as ArrayBuffer },
-        params: { views: n, amount: (s.depthAmount / 100) * w, focus: s.depthFocus, invert: s.depthInvert },
-      }),
-      [px.data.buffer],
-    );
-    for (const f of [...state.frames]) removeFrame(f.id);
-    state.keyPoint = null;
-    for (let i = 0; i < res.views.length; i++) {
-      const bmp = await createImageBitmap(new ImageData(new Uint8ClampedArray(res.views[i]), res.width, res.height));
-      const c = document.createElement('canvas');
-      c.width = res.width;
-      c.height = res.height;
-      c.getContext('2d')!.drawImage(bmp, 0, 0);
-      const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.92));
-      await addFrame(blob!, `${src.name} [${i + 1}/${n}]`, NO_TRANSFORM, true, bmp);
-    }
-    // the middle view is the natural reference
-    state.refId = state.frames[Math.floor(state.frames.length / 2)]?.id ?? null;
-    state.selectedId = state.refId;
-    renderFrameList();
-    updateLensInfo();
-    scheduleRedraw();
-    showTab('preview');
-    status(`Generated ${n} frames.`);
-  } catch (e) {
-    status(`Generating frames failed: ${(e as Error).message}`, 'error', 8000);
-  } finally {
-    setBusy(false);
-    drawDepthThumb();
-  }
-}
-
-$('btn-depth-estimate').addEventListener('click', () => !busy && estimateDepth());
-$('btn-depth-load').addEventListener('click', () => $<HTMLInputElement>('depth-input').click());
-$<HTMLInputElement>('depth-input').addEventListener('change', (e) => {
-  const input = e.target as HTMLInputElement;
-  if (input.files?.[0]) loadDepthMap(input.files[0]).finally(() => (input.value = ''));
+// Depth from a single photo → generated 3D views (see ui/depthPanel.ts)
+depthPanel = initDepthPanel({
+  $, S,
+  frames: () => state.frames,
+  selFrame,
+  isBusy: () => busy,
+  setBusy,
+  status,
+  progress,
+  decodeAny,
+  replaceFrames,
+  worker,
 });
-$('btn-depth-generate').addEventListener('click', () => generateFromDepth());
 
 // labels show their control's tooltip too, so hovering the label text works
 document.querySelectorAll<HTMLLabelElement>('label').forEach((l) => {
@@ -1715,4 +1450,4 @@ renderFrameList();
 scheduleRedraw();
 
 // expose for automated tests / debugging
-(window as unknown as { lenticulator: unknown }).lenticulator = { state, importFiles, autoAlign, renderPrint, generatePattern };
+(window as unknown as { lenticulator: unknown }).lenticulator = { state, importFiles, autoAlign, renderPrint, generatePattern, getResult: () => result };

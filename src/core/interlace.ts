@@ -43,6 +43,8 @@ export function lensWeights(count: number, p: LensParams): LensWeights {
   const idx = new Int16Array(count * k).fill(-1);
   const weight = new Float32Array(count * k);
   const order = (j: number) => (p.reverse ? N - 1 - j : j);
+  const acc = new Float64Array(N); // reused per pixel
+  const keptJ = new Int32Array(N), keptW = new Float64Array(N);
   for (let i = 0; i < count; i++) {
     if (p.sampling === 'nearest') {
       const u = (i + 0.5) * r + p.phase;
@@ -54,7 +56,7 @@ export function lensWeights(count: number, p: LensParams): LensWeights {
     const u0 = i * r + p.phase;
     const u1 = (i + 1) * r + p.phase;
     // walk strip boundaries (in units of 1/N lens) between u0 and u1
-    const acc = new Float64Array(N);
+    acc.fill(0);
     let s = Math.floor(u0 * N);
     let a = u0;
     while (a < u1 - 1e-12) {
@@ -64,16 +66,24 @@ export function lensWeights(count: number, p: LensParams): LensWeights {
       a = b;
       s++;
     }
-    // keep the k largest contributions (normally all of them)
-    const list: [number, number][] = [];
-    for (let j = 0; j < N; j++) if (acc[j] > 0) list.push([j, acc[j]]);
-    list.sort((x, y) => y[1] - x[1]);
-    const kept = list.slice(0, k);
-    const tot = kept.reduce((t, e) => t + e[1], 0) || 1;
-    kept.forEach(([j, w], e) => {
-      idx[i * k + e] = order(j);
-      weight[i * k + e] = w / tot;
-    });
+    // collect contributions in frame order, then stable-sort by weight (largest first) and keep k;
+    // n ≤ N is tiny, so insertion sort on reused buffers beats allocating and sorting arrays
+    let n = 0;
+    for (let j = 0; j < N; j++) {
+      if (!(acc[j] > 0)) continue;
+      let p2 = n++;
+      while (p2 > 0 && keptW[p2 - 1] < acc[j]) { keptW[p2] = keptW[p2 - 1]; keptJ[p2] = keptJ[p2 - 1]; p2--; }
+      keptW[p2] = acc[j];
+      keptJ[p2] = j;
+    }
+    if (n > k) n = k;
+    let tot = 0;
+    for (let e = 0; e < n; e++) tot += keptW[e];
+    tot = tot || 1;
+    for (let e = 0; e < n; e++) {
+      idx[i * k + e] = order(keptJ[e]);
+      weight[i * k + e] = keptW[e] / tot;
+    }
   }
   return { k, idx, weight };
 }
@@ -82,6 +92,32 @@ export interface RGBAImage {
   width: number;
   height: number;
   data: Uint8ClampedArray;
+  /** every alpha is 255 → the renderer can skip transparency maths */
+  opaque?: boolean;
+}
+
+export function isOpaque(data: Uint8ClampedArray | Uint8Array): boolean {
+  for (let i = 3; i < data.length; i += 4) if (data[i] !== 255) return false;
+  return true;
+}
+
+/**
+ * Integer source rectangle (in frame pixels) that rows [y0, y1) of a
+ * `width`-wide output can sample through matrix `m`, plus a margin for
+ * bilinear neighbours, clipped to the frame. Lets a band be rendered from a
+ * crop of each frame instead of the whole frame.
+ */
+export function bandSourceRect(m: Affine, width: number, y0: number, y1: number, fw: number, fh: number, margin = 2) {
+  const xs: number[] = [], ys: number[] = [];
+  for (const [x, y] of [[0, y0], [width, y0], [0, y1], [width, y1]]) {
+    xs.push(m[0] * x + m[2] * y + m[4]);
+    ys.push(m[1] * x + m[3] * y + m[5]);
+  }
+  const x0 = Math.max(0, Math.floor(Math.min(...xs)) - margin);
+  const yy0 = Math.max(0, Math.floor(Math.min(...ys)) - margin);
+  const x1 = Math.min(fw, Math.ceil(Math.max(...xs)) + margin);
+  const yy1 = Math.min(fh, Math.ceil(Math.max(...ys)) + margin);
+  return { x: x0, y: yy0, w: Math.max(0, x1 - x0), h: Math.max(0, yy1 - yy0) };
 }
 
 export interface InterlaceJob {
@@ -132,6 +168,13 @@ export function renderRows(job: InterlaceJob, y0: number, y1: number, out: Uint8
         const i00 = (y0i * W + x0) * 4, i10 = (y0i * W + x1) * 4;
         const i01 = (y1i * W + x0) * 4, i11 = (y1i * W + x1) * 4;
         const w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
+        if (fr.opaque) {
+          // fast path for opaque frames (most photos): plain bilinear RGB
+          r += w * (w00 * d[i00] + w10 * d[i10] + w01 * d[i01] + w11 * d[i11]);
+          g += w * (w00 * d[i00 + 1] + w10 * d[i10 + 1] + w01 * d[i01 + 1] + w11 * d[i11 + 1]);
+          b += w * (w00 * d[i00 + 2] + w10 * d[i10 + 2] + w01 * d[i01 + 2] + w11 * d[i11 + 2]);
+          continue;
+        }
         // composite frame alpha over the background
         const a00 = d[i00 + 3] / 255, a10 = d[i10 + 3] / 255, a01 = d[i01 + 3] / 255, a11 = d[i11 + 3] / 255;
         const alpha = w00 * a00 + w10 * a10 + w01 * a01 + w11 * a11;
