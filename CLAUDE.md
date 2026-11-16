@@ -1,7 +1,9 @@
 # Lenticulator: notes for Claude
 
-## Always update the live artifact
-After **every** change to the app, rebuild and republish the claude.ai artifact so the user can see it:
+## ALWAYS keep the live artifact up to date (user requirement)
+Immediately after **every** change to the app, rebuild and republish the claude.ai artifact so the user can see it.
+Don't batch changes or leave a change unpublished. If a publish is rejected, fix the cause and republish
+before doing anything else. The artifact only serves known file types (e.g. binary data must use `.wasm`):
 https://claude.ai/artifact/3c21TLFn6CRxTrVdtvcG8z
 
 ```bash

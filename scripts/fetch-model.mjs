@@ -9,7 +9,7 @@ const FILE = 'onnx/model_quantized.onnx';
 const OUT = 'public/models/depth-anything-v2-small';
 const PART = 12 * 1024 * 1024;
 
-if (existsSync(join(OUT, 'manifest.json'))) {
+if (existsSync(join(OUT, 'manifest.json')) && existsSync(join(OUT, 'model.part0.wasm'))) {
   console.log('depth model already present');
   process.exit(0);
 }
@@ -28,7 +28,8 @@ try {
 mkdirSync(OUT, { recursive: true });
 const parts = [];
 for (let i = 0, o = 0; o < buf.length; i++, o += PART) {
-  const name = `model.part${i}`;
+  // .wasm extension only so static hosts (incl. claude.ai artifacts) serve the raw bytes; the worker reads them as binary
+  const name = `model.part${i}.wasm`;
   writeFileSync(join(OUT, name), buf.subarray(o, o + PART));
   parts.push(name);
 }

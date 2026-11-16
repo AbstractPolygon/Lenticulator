@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+- Settings → Panel: show the control panel on the left or right.
+- Depth model parts use a `.wasm` extension so every static host serves them.
+
 ## 0.3.0
 - **Depth from a single photo**: estimate depth on-device (Depth Anything V2 Small, WebAssembly) or load a
   depth map, then generate N views for a 3D print. Frame count can follow DPI ÷ LPI ("Match LPI").

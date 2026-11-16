@@ -1442,6 +1442,22 @@ if (inArtifactHost()) {
   $('btn-print').hidden = true;
 }
 
+// Control panel side (per-device preference, like the theme)
+const PANEL_KEY = 'lenticulator.panelSide';
+function applyPanelSide(side: string) {
+  document.querySelector('.layout')!.classList.toggle('panel-right', side === 'right');
+  $<HTMLSelectElement>('panel-side').value = side === 'right' ? 'right' : 'left';
+  scheduleRedraw();
+}
+let savedSide = 'left';
+try { savedSide = localStorage.getItem(PANEL_KEY) || 'left'; } catch { /* storage unavailable */ }
+applyPanelSide(savedSide);
+$('panel-side').addEventListener('change', (e) => {
+  const side = (e.target as HTMLSelectElement).value;
+  applyPanelSide(side);
+  try { localStorage.setItem(PANEL_KEY, side); } catch { /* ignore */ }
+});
+
 // Top-bar popup menus
 function bindMenu(btnId: string, panelId: string) {
   const btn = $(btnId);
