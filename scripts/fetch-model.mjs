@@ -1,6 +1,7 @@
 // Downloads the Depth Anything V2 Small depth-estimation model (Apache-2.0) into
 // public/models/, split into <15 MB parts (claude.ai artifacts cap single files at 15 MB).
-// Runs automatically before `npm run build`; skips if the model is already present.
+// The model is committed to the repo (public/models/), so this normally does nothing; it re-downloads
+// the model only if those files are missing. Runs automatically before `npm run build`.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 

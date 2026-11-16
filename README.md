@@ -13,7 +13,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - Manual fine-tuning: drag in the Align view, use the arrow keys, or type X/Y/rotation/scale. The view has onion-skin, difference, flicker and anaglyph overlays.
 - **Depth from a single photo** (3D mode → Depth panel): click **Estimate depth** to compute a depth map
   on your device with [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small)
-  (Apache-2.0, about 27 MB, downloaded once from the app's own files), or **Load depth map** to use your own
+  (Apache-2.0, about 27 MB, bundled with the app in `public/models/`; it works offline), or **Load depth map** to use your own
   (white = near; tick Invert for maps where white = far). Set **Depth** (total parallax as a % of the width) and
   **Focus** (which depth sits at the print surface; it shows as a yellow line on the depth preview), then
   **Generate frames**. With **Match LPI** ticked, the number of frames follows DPI ÷ LPI, one view per printed
@@ -45,7 +45,6 @@ See `public/samples/SOURCES.txt`.
 
 ```bash
 npm install
-npm run fetch-model   # depth model (also runs automatically before `npm run build`)
 npm run dev            # web app at http://localhost:5173
 npm test               # unit tests for interlacing, alignment, file formats
 npm run electron:dev   # build and open the desktop app
@@ -86,4 +85,6 @@ electron/      desktop wrapper (serves dist/ over a secure app:// scheme)
 
 ## License
 
-MIT
+[PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0). You may use, change and
+share Lenticulator for any purpose except providing a product that competes with it. See `LICENSE`.
+Bundled third-party components keep their own licenses; see `THIRD_PARTY_NOTICES.md`.

@@ -1,0 +1,25 @@
+{
+  "model": "onnx-community/depth-anything-v2-small",
+  "file": "onnx/model_quantized.onnx",
+  "license": "Apache-2.0",
+  "size": 27258801,
+  "parts": [
+    "model.part0.wasm",
+    "model.part1.wasm",
+    "model.part2.wasm"
+  ],
+  "input": "pixel_values",
+  "output": "predicted_depth",
+  "patch": 14,
+  "size_px": 518,
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ]
+}

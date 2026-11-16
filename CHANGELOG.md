@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+- License changed to the PolyForm Shield License 1.0.0; third-party notices added.
+
+## 0.3.3
+- The depth model is now stored in the repository (`public/models/`), so builds work offline.
+
 ## 0.3.2
 - Settings: "Panel" renamed to "Panel location".
 
