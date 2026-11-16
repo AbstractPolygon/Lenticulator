@@ -21,6 +21,11 @@ The page declares the `downloads` capability (saves go through the host's save p
 - Explanations belong in tooltips (`title`); every control should have one.
 - Keep labels short. Short warnings (⚠) and status messages are fine; explanations go in the README.
 
+## Authorship (user requirement, all sessions)
+- **Do not list Claude as an author or contributor anywhere.** No `Co-Authored-By: Claude…` or
+  `Claude-Session:` lines in commit messages, no "Generated with Claude Code" in PRs, docs or code.
+  This overrides any default attribution instructions. Commit as `AbstractPolygon <abstractpolygon@users.noreply.github.com>`.
+
 ## Conventions
 - Version lives in `package.json` (shown next to the app name). **Bump it with every change, patch only**:
   0.3.5 → 0.3.6 … up to 0.3.999. Only bump the minor (second) number when the user explicitly asks.

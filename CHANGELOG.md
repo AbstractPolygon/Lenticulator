@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.8
+- Fix: the key point could land in the wrong place when picking it switched to the Align tab.
+- Fix: the frame list's scrollbar no longer covers the remove buttons.
+
 ## 0.3.7
 - Tooltips on all controls.
 - Logo: solid colour (no gradient), strips centred.

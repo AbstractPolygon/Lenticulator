@@ -1320,8 +1320,10 @@ function showTab(name: string) {
   document.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.tab === name)));
   for (const t of ['preview', 'align', 'output']) $(`tab-${t}`).hidden = t !== name;
+  // draw right away so the view's layout (used for clicks, e.g. picking the key point) is current
   if (name === 'output') drawOutput();
-  else scheduleRedraw();
+  else if (name === 'align') drawAlign();
+  else drawPreview();
 }
 
 function bindChrome() {
