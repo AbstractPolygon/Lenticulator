@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.21
+- Video export: set how many times the video tilts back and forth (1–20 loops, default 2), next to the format buttons.
+- The render button now just says "Render".
+- GIF export: dither options (none, Floyd–Steinberg, Atkinson, ordered) next to the speed.
+
 ## 0.3.20
 - macOS: the app is ad-hoc signed, so Apple Silicon Macs open it instead of saying it "is damaged". The first time,
   macOS may still ask: System Settings → Privacy & Security → Open Anyway. The build now checks the signatures and

@@ -31,7 +31,7 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 
 ![Render and export panel](images/export-panel.png)
 
-1. Choose a format, then click **Render image** to interlace the frames at full print resolution. The result appears in the **Output** tab.
+1. Choose a format, then click **Render** to interlace the frames at full print resolution. The result appears in the **Output** tab.
 2. Click **Download**.
 
 | Format | Contents |
@@ -39,8 +39,8 @@ The Output tab zooms up to 3200% so you can inspect individual print dots.
 | **PNG** | Rendered print, lossless, tagged with the print DPI. |
 | **JPG** | Rendered print, tagged with the print DPI. |
 | **TIF** | Rendered print, uncompressed, tagged with the print DPI. |
-| **GIF** | Animated GIF of the aligned frames, one GIF frame per frame (no render needed). Set the speed in frames per second (1–50, default 10) next to the format buttons. Animations loop forward; 3D views rock back and forth. |
-| **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). |
+| **GIF** | Animated GIF of the aligned frames, one GIF frame per frame (no render needed). Set the speed in frames per second (1–50, default 10) and the dithering (none, Floyd–Steinberg, Atkinson or ordered) next to the format buttons. Dithering smooths gradients in the GIF's 256 colours; ordered gives a regular, retro pattern. Animations loop forward; 3D views rock back and forth. |
+| **Video** | MP4 (or WebM where MP4 isn't available) of the tilt preview (no render needed). Set how many times it tilts back and forth (1–20 loops, default 2) next to the format buttons. |
 
 **Print…** prints at the exact physical size. Turn off printer scaling and borderless expansion.
 
