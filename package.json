@@ -1,7 +1,7 @@
 {
   "name": "lenticulator",
   "productName": "Lenticulator",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "Create interlaced images for lenticular prints - in the browser or on the desktop.",
   "license": "SEE LICENSE IN LICENSE",
   "author": "AbstractPolygon",
@@ -120,7 +120,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "buildUniversalInstaller": false
     },
     "dmg": {
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"

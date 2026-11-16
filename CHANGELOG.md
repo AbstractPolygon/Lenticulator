@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.12
+- Windows: build only the per-architecture installers (x64, arm64), not an extra combined one.
+
 ## 0.3.11
 - Desktop builds workflow: Linux AppImage and Snap, Windows NSIS installer (x64, arm64), macOS DMG
   (Intel, Apple silicon); manual runs upload installers as artifacts, version tags attach them to a draft release.
