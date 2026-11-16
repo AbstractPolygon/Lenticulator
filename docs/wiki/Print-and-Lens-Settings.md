@@ -17,6 +17,7 @@
 |---|---|
 | **Size preset**, **Width**, **Height**, **Units** | Print size without margins, in inches or mm. Print presets keep the current portrait/landscape orientation. **Social** presets (Instagram, Story/Reel/TikTok, YouTube, X, Facebook/LinkedIn, Pinterest) set exactly that many pixels at the current DPI and keep them when the DPI changes; GIF and video exports use the same pixel size. |
 | **Print DPI** | Your printer's resolution. Use its native resolution (e.g. 600/1200 Canon/HP, 720/1440 Epson). |
+| **Printer**, **Lens sheet** | Presets that set Print DPI (Epson 720/1440/2880, Canon/HP 600/1200/2400, Laser 600/1200) and Lens LPI (15–100) by name. They show *Custom* when you type your own values, e.g. the LPI found with the pitch test. |
 | **Lens LPI** | Lenses per inch. Fractional values are allowed; use the value found with the [pitch test](Test-Patterns). |
 | **Lens direction** | **Vertical**: tilt left/right (needed for 3D). **Horizontal**: tilt up/down. |
 | **Sampling** | **Blend**: anti-aliased strips, exact for any DPI/LPI. **Nearest**: crisp strips of whole printer dots. |

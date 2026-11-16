@@ -150,13 +150,19 @@
             <label>Units
               <select id="units" title="Units for sizes and margin"><option value="in">inches</option><option value="mm">mm</option></select>
             </label>
-            <label>Print DPI <input id="dpi" title="Printer resolution in dots per inch. Use your printer&#x27;s native resolution (e.g. 600/1200 Canon/HP, 720/1440 Epson)" type="number" min="72" max="4800" step="1" list="dpi-list" /></label>
-            <label>Lens LPI <input id="lpi" title="Lenses per inch of your lenticular sheet. Use the value found with the pitch test for best results" type="number" min="1" max="400" step="0.001" list="lpi-list" /></label>
             <label>Lens direction
               <select id="orientation" title="Direction the lenses run. Vertical: tilt left/right (needed for 3D). Horizontal: tilt up/down (best for animation)">
                 <option value="vertical">Vertical</option>
                 <option value="horizontal">Horizontal</option>
               </select>
+            </label>
+            <label>Print DPI <input id="dpi" title="Printer resolution in dots per inch. Use your printer&#x27;s native resolution (e.g. 600/1200 Canon/HP, 720/1440 Epson)" type="number" min="72" max="4800" step="1" list="dpi-list" /></label>
+            <label>Lens LPI <input id="lpi" title="Lenses per inch of your lenticular sheet. Use the value found with the pitch test for best results" type="number" min="1" max="400" step="0.001" list="lpi-list" /></label>
+            <label>Printer
+              <select id="printer-preset" title="Pick your printer to set its native resolution (Print DPI)"></select>
+            </label>
+            <label>Lens sheet
+              <select id="lens-preset" title="Pick a common lens sheet pitch to set Lens LPI. For best results, check your sheet with the pitch test"></select>
             </label>
             <label>Sampling
               <select id="sampling" title="Blend: anti-aliased strips (exact for any DPI/LPI). Nearest: crisp whole-dot strips">

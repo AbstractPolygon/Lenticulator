@@ -225,3 +225,18 @@ export function lensStats(lpi: number, dpi: number, frames: number) {
 
 export const COMMON_LPI = [10, 15, 20, 25, 30, 40, 50, 60, 62, 75, 100, 120, 150, 161];
 export const COMMON_DPI = [300, 360, 600, 720, 1200, 1440, 2400, 2880];
+
+/** Printers by their native resolution (the DPI to use). */
+export const PRINTER_PRESETS: { label: string; dpi: number }[] = [
+  { label: 'Epson 720', dpi: 720 },
+  { label: 'Epson 1440', dpi: 1440 },
+  { label: 'Epson 2880', dpi: 2880 },
+  { label: 'Canon / HP 600', dpi: 600 },
+  { label: 'Canon / HP 1200', dpi: 1200 },
+  { label: 'Canon / HP 2400', dpi: 2400 },
+  { label: 'Laser 600', dpi: 600 },
+  { label: 'Laser 1200', dpi: 1200 },
+];
+
+/** Common lenticular sheet pitches. */
+export const LENS_PRESETS = [15, 20, 25, 30, 40, 50, 60, 62, 75, 100];

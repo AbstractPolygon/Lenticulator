@@ -2,7 +2,7 @@ import './styles.css';
 import {
   Affine, FrameTransform, NO_TRANSFORM, alignMap, baseMap, compose, cropToCommon, frameMatrix, invert, outputMap, scale, apply,
 } from './core/geometry';
-import { COMMON_DPI, COMMON_LPI, lensStats } from './core/interlace';
+import { COMMON_DPI, COMMON_LPI, LENS_PRESETS, PRINTER_PRESETS, lensStats } from './core/interlace';
 import { similarityToParams } from './core/align';
 import { rgbaToGray } from './core/gray';
 import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
@@ -88,6 +88,8 @@ function fillStaticOptions() {
   const opts = (px: boolean) => SIZE_PRESETS.map((p, i) => (!!p.px === px ? `<option value="${i}">${p.label}</option>` : '')).join('');
   preset.innerHTML = `<option value="">Custom</option><optgroup label="Print">${opts(false)}</optgroup><optgroup label="Social">${opts(true)}</optgroup>`;
   $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
+  $('printer-preset').innerHTML = '<option value="">Custom</option>' + PRINTER_PRESETS.map((p, i) => `<option value="${i}">${p.label}</option>`).join('');
+  $('lens-preset').innerHTML = '<option value="">Custom</option>' + LENS_PRESETS.map((l) => `<option value="${l}">${l} LPI</option>`).join('');
   $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
 }
 
@@ -153,6 +155,13 @@ function syncForm() {
   $('depth-panel').hidden = s.mode !== '3d';
   $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
   const pi = matchPreset(s);
+  // printer / lens presets show the one matching the typed values (a printer keeps its pick when DPIs are shared)
+  const pp = $<HTMLSelectElement>('printer-preset');
+  if (!(pp.value !== '' && PRINTER_PRESETS[+pp.value]?.dpi === s.dpi)) {
+    const k = PRINTER_PRESETS.findIndex((p) => p.dpi === s.dpi);
+    pp.value = k >= 0 ? String(k) : '';
+  }
+  $<HTMLSelectElement>('lens-preset').value = LENS_PRESETS.includes(s.lpi) ? String(s.lpi) : '';
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
   document.querySelectorAll<HTMLButtonElement>('#effect-mode [data-mode]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
@@ -206,6 +215,8 @@ function bindSettings() {
   on('width', 'change', (el) => (S().widthIn = pos(el.value, S().widthIn * unitFactor()) / unitFactor()));
   on('height', 'change', (el) => (S().heightIn = pos(el.value, S().heightIn * unitFactor()) / unitFactor()));
   on('units', 'change', (el) => (S().units = el.value as Settings['units']));
+  on('printer-preset', 'change', (el) => { const p = PRINTER_PRESETS[+el.value]; if (el.value !== '' && p) S().dpi = p.dpi; });
+  on('lens-preset', 'change', (el) => { if (el.value) S().lpi = +el.value; });
   on('dpi', 'change', (el) => {
     const social = SIZE_PRESETS[matchPreset(S())];
     S().dpi = Math.min(4800, pos(el.value, S().dpi));

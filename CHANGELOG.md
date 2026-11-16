@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.35
+- **Printer** and **Lens sheet** presets (Print & lens) set the DPI and LPI by name; they show Custom for typed values.
+  Print DPI and Lens LPI now sit side by side above them.
+
 ## 0.3.34
 - In Key point mode, **Auto-align** is greyed out until a key point has been picked.
 
