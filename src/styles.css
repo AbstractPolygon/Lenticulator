@@ -82,6 +82,13 @@ body {
   background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
   box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 10px 12px;
 }
+.menu-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  border: 0; background: transparent; color: var(--text); font: inherit; text-align: left;
+  padding: 6px 8px; border-radius: 6px; cursor: pointer;
+}
+.menu-item:hover, .menu-item:focus-visible { background: var(--panel-2); }
+.menu-item small { color: var(--muted); font-variant-numeric: tabular-nums; }
 .menu-title { font-weight: 650; font-size: 14px; margin-bottom: 8px; }
 .menu-section + .menu-section { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
 .menu-heading { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }

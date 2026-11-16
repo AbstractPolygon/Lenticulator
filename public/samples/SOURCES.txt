@@ -1,0 +1,10 @@
+Sample images bundled with Lenticulator
+
+aloe, baby1, bowling2, flowerpots (3D, 7 views each, half size, re-encoded as JPEG)
+  Middlebury 2006 stereo datasets - https://vision.middlebury.edu/stereo/data/scenes2006/
+  D. Scharstein and C. Pal. Learning conditional random fields for stereo. CVPR 2007.
+  H. Hirschmüller and D. Scharstein. Evaluation of cost functions for stereo matching. CVPR 2007.
+
+horse (animation, 11 frames)
+  Eadweard Muybridge, "The Horse in Motion" (1878). Library of Congress, no known restrictions on publication.
+  https://www.loc.gov/item/97502309/

@@ -26,6 +26,14 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 
 All processing happens locally. Images never leave your computer.
 
+## Sample images
+
+The Samples menu in the top bar loads ready-made sets: four 3D scenes, each with 7 camera views, from the
+[Middlebury 2006 stereo datasets](https://vision.middlebury.edu/stereo/data/scenes2006/) (Scharstein & Pal, CVPR 2007;
+Hirschmüller & Scharstein, CVPR 2007), and an 11-frame animation from Eadweard Muybridge's
+[The Horse in Motion](https://www.loc.gov/item/97502309/) (1878, Library of Congress, no known restrictions).
+See `public/samples/SOURCES.txt`.
+
 ## Getting started
 
 ```bash

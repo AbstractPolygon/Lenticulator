@@ -1,0 +1,78 @@
+{
+  "samples": [
+    {
+      "id": "aloe",
+      "name": "Aloe",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "baby1",
+      "name": "Baby",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "bowling2",
+      "name": "Bowling",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "flowerpots",
+      "name": "Flowerpots",
+      "mode": "3d",
+      "files": [
+        "view0.jpg",
+        "view1.jpg",
+        "view2.jpg",
+        "view3.jpg",
+        "view4.jpg",
+        "view5.jpg",
+        "view6.jpg"
+      ]
+    },
+    {
+      "id": "horse",
+      "name": "Horse in Motion",
+      "mode": "animation",
+      "files": [
+        "frame01.jpg",
+        "frame02.jpg",
+        "frame03.jpg",
+        "frame04.jpg",
+        "frame05.jpg",
+        "frame06.jpg",
+        "frame07.jpg",
+        "frame08.jpg",
+        "frame09.jpg",
+        "frame10.jpg",
+        "frame11.jpg"
+      ]
+    }
+  ]
+}

@@ -5,10 +5,10 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } f
 import { join } from 'node:path';
 
 const out = process.argv[2] ?? 'artifact';
-rmSync(join(out, 'assets'), { recursive: true, force: true });
+rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-cpSync('dist/assets', join(out, 'assets'), { recursive: true });
-cpSync('dist/icon.svg', join(out, 'icon.svg'));
+// everything the page references (assets, icon, samples), except the HTML which is rewritten below
+cpSync('dist', out, { recursive: true, filter: (src) => !src.endsWith('index.html') });
 
 const html = readFileSync('dist/index.html', 'utf8');
 const head = html.slice(html.indexOf('<head>') + 6, html.indexOf('</head>'))
@@ -19,7 +19,7 @@ const head = html.slice(html.indexOf('<head>') + 6, html.indexOf('</head>'))
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>')).trim();
 writeFileSync(join(out, 'lenticulator.html'), `<title>Lenticulator</title>\n${head}\n${body}\n`);
 
-const files = Object.fromEntries(
-  ['icon.svg', ...readdirSync(join(out, 'assets')).map((f) => `assets/${f}`)].map((f) => [f, f]),
-);
+const list = (dir) => readdirSync(join(out, dir), { withFileTypes: true }).flatMap((d) =>
+  d.isDirectory() ? list(join(dir, d.name)) : [join(dir, d.name)]);
+const files = Object.fromEntries(list('').filter((f) => f !== 'lenticulator.html').map((f) => [f, f]));
 console.log(JSON.stringify({ page: join(out, 'lenticulator.html'), root: out, files }, null, 2));

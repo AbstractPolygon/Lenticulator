@@ -1318,10 +1318,10 @@ if (inArtifactHost()) {
   if (S().exportFormat === 'tiff') S().exportFormat = 'png';
 }
 
-// Settings menu (top bar)
-{
-  const btn = $('btn-settings');
-  const panel = $('settings-panel');
+// Top-bar popup menus
+function bindMenu(btnId: string, panelId: string) {
+  const btn = $(btnId);
+  const panel = $(panelId);
   const setOpen = (open: boolean) => {
     panel.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
@@ -1334,6 +1334,63 @@ if (inArtifactHost()) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); }
   });
+  return setOpen;
+}
+bindMenu('btn-settings', 'settings-panel');
+const setSamplesOpen = bindMenu('btn-samples', 'samples-panel');
+
+// Bundled sample sets (public/samples), listed from their manifest
+interface Sample { id: string; name: string; mode: Settings['mode']; files: string[] }
+let samples: Sample[] = [];
+let replaceArmed: string | null = null;
+fetch('samples/index.json')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+  .then((m: { samples: Sample[] }) => {
+    samples = m.samples;
+    const list = $('samples-list');
+    const groups: [Settings['mode'], string][] = [['3d', '3D'], ['animation', 'Animation']];
+    list.innerHTML = groups.map(([mode, label]) => `
+      <section class="menu-section">
+        <div class="menu-heading">${label}</div>
+        ${samples.filter((x) => x.mode === mode).map((x) =>
+          `<button class="menu-item" role="menuitem" data-sample="${x.id}">${escapeHtml(x.name)}<small>${x.files.length}</small></button>`).join('')}
+      </section>`).join('');
+  })
+  .catch(() => { $('btn-samples').hidden = true; });
+
+$('samples-list').addEventListener('click', (e) => {
+  const id = (e.target as HTMLElement).closest<HTMLElement>('[data-sample]')?.dataset.sample;
+  const sample = samples.find((x) => x.id === id);
+  if (!sample || busy) return;
+  if (state.frames.length && replaceArmed !== sample.id) {
+    replaceArmed = sample.id;
+    status('Click again to replace the current frames.');
+    setTimeout(() => { if (replaceArmed === sample.id) replaceArmed = null; }, 4000);
+    return;
+  }
+  replaceArmed = null;
+  setSamplesOpen(false);
+  loadSample(sample);
+});
+
+async function loadSample(sample: Sample) {
+  try {
+    status(`Loading ${sample.name}…`, 'info', 20000);
+    const blobs = await Promise.all(sample.files.map(async (f) => {
+      const r = await fetch(`samples/${sample.id}/${f}`);
+      if (!r.ok) throw new Error(`${f}: ${r.status}`);
+      return r.blob();
+    }));
+    for (const f of [...state.frames]) removeFrame(f.id);
+    state.keyPoint = null;
+    Object.assign(S(), { mode: sample.mode }, MODE_DEFAULTS[sample.mode]);
+    saveSettings(S());
+    syncForm();
+    await importFiles(blobs, sample.files.map((f) => `${sample.name} ${f.replace(/\.\w+$/, '')}`));
+    showTab('preview');
+  } catch (e) {
+    status(`Could not load ${sample.name}: ${(e as Error).message}`, 'error', 6000);
+  }
 }
 
 $('app-version').textContent = `v${__APP_VERSION__}`;
