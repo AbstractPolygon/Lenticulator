@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.24
+- Logo: just the lines, without the square (purple in light mode, blue in dark mode). Also on the website.
+
 ## 0.3.23
 - GIF and video: **Render** now makes the animation (not the lenticular print) and plays it in the Output tab;
   **Download** saves it (rendering first if frames or settings changed since).
