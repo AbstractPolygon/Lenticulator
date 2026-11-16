@@ -6,6 +6,7 @@ import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
 import { apply, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
 import { crc32, encodeTiff, getPngDpi, setPngDpi } from '../src/core/fileformats';
 import { composePage, pitchTest } from '../src/core/patterns';
+import { mpoImageRanges } from '../src/core/mpo';
 
 /** Deterministic textured test image (sum of blobs + sinusoids). */
 function texture(w: number, h: number, seed = 1): Gray {
@@ -180,5 +181,38 @@ describe('patterns', () => {
     const page = composePage(img, { margin: 20, alignBars: true, cropMarks: true, orientation: 'vertical', lens: { lpi: 60, dpi: 300, phase: 0 } });
     expect(page.width).toBe(50);
     expect(page.height).toBe(50);
+  });
+});
+
+describe('mpo', () => {
+  /** Build a minimal 2-image MPO: JPEG#1 (SOI, APP2 MPF, EOI) + padding + JPEG#2. */
+  function makeMpo(pad: number) {
+    const img2 = [0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 1, 2, 0xff, 0xd9];
+    // APP2 payload: "MPF\0" + little-endian TIFF header + IFD(2 entries) + 2 MP entries
+    const tiff: number[] = [0x49, 0x49, 0x2a, 0x00, 8, 0, 0, 0];
+    const entriesRel = 8 + 2 + 2 * 12 + 4;
+    const le32 = (v: number) => [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255];
+    const ifd = [2, 0, 0x01, 0xb0, 4, 0, 1, 0, 0, 0, ...le32(2), 0x02, 0xb0, 7, 0, 32, 0, 0, 0, ...le32(entriesRel), 0, 0, 0, 0];
+    const app2Len = 2 + 4 + tiff.length + ifd.length + 32;
+    const head = [0xff, 0xd8, 0xff, 0xe2, app2Len >> 8, app2Len & 255, 0x4d, 0x50, 0x46, 0];
+    const tiffStart = head.length;
+    const img1Len = head.length + tiff.length + ifd.length + 32 + 2;
+    const img2Start = img1Len + pad;
+    const entries = [...le32(0), ...le32(img1Len), ...le32(0), 0, 0, 0, 0,
+      ...le32(0), ...le32(img2.length), ...le32(img2Start - tiffStart), 0, 0, 0, 0];
+    return Uint8Array.from([...head, ...tiff, ...ifd, ...entries, 0xff, 0xd9, ...new Array(pad).fill(0), ...img2]);
+  }
+
+  it('finds both images via the MP index, even with padding between them', () => {
+    const buf = makeMpo(37);
+    const r = mpoImageRanges(buf)!;
+    expect(r).toHaveLength(2);
+    expect(r[0][0]).toBe(0);
+    expect(Array.from(buf.subarray(r[1][0], r[1][0] + 2))).toEqual([0xff, 0xd8]);
+    expect(r[1][1]).toBe(buf.length);
+  });
+
+  it('returns null for a plain JPEG', () => {
+    expect(mpoImageRanges(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xda]))).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+import { mpoImageRanges } from '../core/mpo';
+
 /** Image import helpers. */
 
 /**
@@ -8,6 +10,16 @@
 export async function splitMultiPicture(file: Blob): Promise<Blob[]> {
   const buf = new Uint8Array(await file.arrayBuffer());
   if (buf[0] !== 0xff || buf[1] !== 0xd8) return [file];
+  // proper MPO: use the MP Index (handles padding between images, skips nothing it lists)
+  const ranges = mpoImageRanges(buf);
+  if (ranges) {
+    const parts = ranges
+      .map(([a, b]) => buf.subarray(a, b))
+      .filter((part) => part.length > 20_000 && part[0] === 0xff && part[1] === 0xd8)
+      .map((part) => new Blob([part as BlobPart], { type: 'image/jpeg' }));
+    if (parts.length > 1) return parts;
+  }
+  // fallback: JPEGs concatenated directly (EOI immediately followed by SOI)
   const starts: number[] = [0];
   for (let i = 2; i < buf.length - 4; i++) {
     // a new JPEG begins right after an EOI marker

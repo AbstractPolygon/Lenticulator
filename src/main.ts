@@ -111,9 +111,6 @@ function syncForm() {
   document.querySelectorAll<HTMLButtonElement>('.segmented [data-mode]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.mode === s.mode)));
   const is3d = s.mode === '3d';
-  $('mode-hint').textContent = is3d
-    ? 'Frames are views from left to right (camera slid sideways). Vertical lenses give each eye a different view, so the print looks deep without glasses.'
-    : 'Frames play in order as the print is tilted. Horizontal lenses (tilt up/down) let both eyes see the same frame, which avoids ghosting.';
   $('preview-mode-wrap').hidden = !is3d;
   if (!is3d) $<HTMLSelectElement>('preview-mode').value = 'tilt';
   $('view-label').textContent = is3d ? 'View angle' : 'Tilt';
@@ -193,27 +190,18 @@ function updateLensInfo() {
     `Output <b>${px.w} × ${px.h}</b> px (${mpx.toFixed(1)} MP) · ${Math.round(lenses)} lenses`,
   ];
   if (n > st.maxUsefulFrames)
-    lines.push(`<span class="warn">⚠ ${n} frames exceeds ${st.maxUsefulFrames} dots/lens – raise DPI or use fewer frames.</span>`);
+    lines.push(`<span class="warn">⚠ More frames than dots per lens (${st.maxUsefulFrames})</span>`);
   if (s.mode === 'animation' && s.orientation === 'vertical')
-    lines.push('<span class="warn">Vertical lenses with animation: each eye may see a different frame (ghosting). Horizontal is usually better.</span>');
+    lines.push('<span class="warn">⚠ Vertical lenses may ghost in animation</span>');
   if (s.mode === '3d' && s.orientation === 'horizontal')
-    lines.push('<span class="warn">3D needs vertical lenses so each eye sees a different view.</span>');
-  if (mpx > 250) lines.push('<span class="warn">⚠ Very large output; browsers may fail above ~250 MP.</span>');
-  if (!st.integerPixels)
-    lines.push(`Tip: ${Math.round(st.pixelsPerLens) * s.lpi} DPI would give a whole number of dots per lens.`);
+    lines.push('<span class="warn">⚠ 3D needs vertical lenses</span>');
+  if (mpx > 250) lines.push('<span class="warn">⚠ Very large output</span>');
   $('lens-info').innerHTML = lines.join('<br>');
   $('frame-count').textContent = String(state.frames.length);
 }
 
 function updateAlignHint() {
-  const m = S().alignMode;
-  $('align-hint').textContent =
-    m === 'keypoint'
-      ? 'For 3D: click “Pick key point”, then click the subject that should sit at the print surface. Each frame is shifted so that point lines up; foreground and background keep their parallax.'
-      : m === 'translation'
-        ? 'Aligns whole images by shifting only. Best for flip/animation frames from a tripod.'
-        : 'Corrects shift, small rotation and zoom differences between frames (hand-held shots, scans).';
-  $('btn-pick-key').hidden = m !== 'keypoint';
+  $('btn-pick-key').hidden = S().alignMode !== 'keypoint';
 }
 
 // ---------------------------------------------------------------------------
@@ -518,7 +506,7 @@ function drawPreview() {
     ctx.fillStyle = '#888';
     ctx.font = `${Math.round(Math.min(r.h, r.w / 1.5) / 18)}px system-ui`;
     ctx.textAlign = 'center';
-    ctx.fillText('Drop images or a folder here to begin', r.x + r.w / 2, r.y + r.h / 2);
+    ctx.fillText('Drop images here', r.x + r.w / 2, r.y + r.h / 2);
     return;
   }
   ctx.save();
@@ -1269,11 +1257,6 @@ function bindChrome() {
   const syncPattern = () => {
     $('pitch-opts').hidden = pt.value !== 'pitch';
     $('frames-opts').hidden = pt.value !== 'frames';
-    $('pattern-hint').textContent = {
-      pitch: 'Print, lay your lens on top with lenses parallel to the lines, and view from your normal distance. The band that flips cleanly between solid black and white (no stripes) is your true LPI – enter it above.',
-      ruler: 'Print at 100% and check the inch/cm scales with a real ruler to confirm the printer isn’t scaling. Lens lines help line up the sheet.',
-      frames: 'Each frame is a numbered colour. Tilting should step through 1, 2, 3… in order; adjust “Reverse frame order” and “Strip phase” until the middle frames face you head-on.',
-    }[pt.value] ?? '';
   };
   pt.addEventListener('change', syncPattern);
   syncPattern();

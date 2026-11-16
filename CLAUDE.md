@@ -11,6 +11,11 @@ Then publish `artifact/lenticulator.html` with the Artifact tool (`url` above, `
 `files` map the script prints). Pass `null` for asset files from the previous version that no longer exist.
 The page declares the `downloads` capability (saves go through the host's save prompt).
 
+## UI text
+- **No description / explanatory text in the UI.** No hint paragraphs, captions, subtitles or
+  parenthetical explanations in labels or dropdown options (e.g. "Vertical", not "Vertical (flip L/R, 3D)").
+- Keep labels short. Short warnings (⚠) and status messages are fine; explanations go in the README.
+
 ## Conventions
 - Version lives in `package.json` (shown next to the app name). Start: 0.2.0.
 - `npm test` (vitest) and `npx tsc --noEmit` must pass before committing.
