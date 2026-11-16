@@ -27,7 +27,8 @@ export interface Settings {
   alignBars: boolean;
   cropMarks: boolean;
   alignMode: AlignMode;
-  exportFormat: 'png' | 'tiff';
+  /** png/jpg/tiff export the rendered print; gif/video export an animated tilt preview */
+  exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
   /** import each Photoshop layer as a frame */
   psdLayers: boolean;
   /** import every page of a multi-page TIFF */

@@ -119,3 +119,61 @@ export function encodeTiff(rgba: Uint8ClampedArray | Uint8Array, width: number, 
   }
   return out;
 }
+
+/**
+ * Set the JFIF density of a JPEG to the given DPI (inserting a JFIF APP0
+ * segment if the file has none).
+ */
+export function setJpegDpi(jpg: Uint8Array, dpi: number): Uint8Array {
+  if (jpg[0] !== 0xff || jpg[1] !== 0xd8) throw new Error('Not a JPEG');
+  const d = Math.max(1, Math.min(65535, Math.round(dpi)));
+  const isJfif = jpg[2] === 0xff && jpg[3] === 0xe0 &&
+    String.fromCharCode(jpg[6], jpg[7], jpg[8], jpg[9]) === 'JFIF' && jpg[10] === 0;
+  if (isJfif) {
+    const out = jpg.slice();
+    out[13] = 1; // units: dots per inch
+    out[14] = d >> 8; out[15] = d & 255;
+    out[16] = d >> 8; out[17] = d & 255;
+    return out;
+  }
+  const app0 = [0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 1, d >> 8, d & 255, d >> 8, d & 255, 0, 0];
+  const out = new Uint8Array(jpg.length + app0.length);
+  out.set(jpg.subarray(0, 2));
+  out.set(app0, 2);
+  out.set(jpg.subarray(2), 2 + app0.length);
+  return out;
+}
+
+/** Read the DPI from a JPEG's JFIF header (or null). */
+export function getJpegDpi(jpg: Uint8Array): number | null {
+  if (jpg[2] !== 0xff || jpg[3] !== 0xe0 || jpg[13] !== 1) return null;
+  return (jpg[14] << 8) | jpg[15];
+}
+
+/** A single-file ZIP archive (stored, no compression). */
+export function zipStore(name: string, data: Uint8Array): Uint8Array {
+  const fname = new TextEncoder().encode(name);
+  const crc = crc32(data);
+  const local = new Uint8Array(30 + fname.length);
+  const lv = new DataView(local.buffer);
+  lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true);
+  lv.setUint16(8, 0, true); // stored
+  lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+  lv.setUint16(26, fname.length, true);
+  local.set(fname, 30);
+  const central = new Uint8Array(46 + fname.length);
+  const cv = new DataView(central.buffer);
+  cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+  cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+  cv.setUint16(28, fname.length, true);
+  cv.setUint32(42, 0, true); // local header offset
+  central.set(fname, 46);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, 1, true); ev.setUint16(10, 1, true);
+  ev.setUint32(12, central.length, true); ev.setUint32(16, local.length + data.length, true);
+  const out = new Uint8Array(local.length + data.length + central.length + end.length);
+  out.set(local, 0); out.set(data, local.length);
+  out.set(central, local.length + data.length); out.set(end, local.length + data.length + central.length);
+  return out;
+}

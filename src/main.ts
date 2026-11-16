@@ -14,7 +14,9 @@ import { WorkerClient } from './ui/workerClient';
 import { RawImage, decodeSpecial, sniffBlob } from './ui/decoders';
 import { Rect, ViewState } from './ui/view';
 import type { FrameRef, WorkerResponse } from './worker';
-import { RenderResult, download, inArtifactHost, printResult, toPng, toTiff } from './ui/export';
+import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPng, toTiff } from './ui/export';
+import { zipStore } from './core/fileformats';
+import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 
 // ---------------------------------------------------------------------------
 // State
@@ -57,6 +59,7 @@ function progress(frac: number | null) {
 function setBusy(b: boolean) {
   busy = b;
   for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern']) ($(id) as HTMLButtonElement).disabled = b;
+  updateExportButtons();
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +103,8 @@ function syncForm() {
   $<HTMLInputElement>('alignBars').checked = s.alignBars;
   $<HTMLInputElement>('cropMarks').checked = s.cropMarks;
   $<HTMLSelectElement>('align-mode').value = s.alignMode;
-  $<HTMLSelectElement>('export-format').value = s.exportFormat;
+  document.querySelectorAll<HTMLButtonElement>('#export-format [data-format]').forEach((b) =>
+    b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
   $<HTMLSelectElement>('psd-import').value = s.psdLayers ? 'layers' : 'flat';
   $<HTMLSelectElement>('tiff-import').value = s.tiffAllPages ? 'all' : 'first';
   const pi = SIZE_PRESETS.findIndex(
@@ -169,7 +173,14 @@ function bindSettings() {
   on('alignBars', 'change', (el) => (S().alignBars = el.checked));
   on('cropMarks', 'change', (el) => (S().cropMarks = el.checked));
   on('align-mode', 'change', (el) => (S().alignMode = el.value as Settings['alignMode']));
-  on('export-format', 'change', (el) => (S().exportFormat = el.value as Settings['exportFormat']));
+  $('export-format').addEventListener('click', (e) => {
+    const fmt = (e.target as HTMLElement).closest<HTMLElement>('[data-format]')?.dataset.format;
+    if (!fmt) return;
+    S().exportFormat = fmt as Settings['exportFormat'];
+    saveSettings(S());
+    syncForm();
+    updateExportButtons();
+  });
   on('psd-import', 'change', (el) => (S().psdLayers = el.value === 'layers'));
   on('tiff-import', 'change', (el) => (S().tiffAllPages = el.value === 'all'));
 }
@@ -178,7 +189,16 @@ function activeFrames(): Frame[] {
   return state.frames.filter((f) => f.enabled);
 }
 
+const isAnimFormat = (f: Settings['exportFormat']) => f === 'gif' || f === 'video';
+
+/** Stills need a rendered print; GIF / video only need frames. */
+function updateExportButtons() {
+  const anim = isAnimFormat(S().exportFormat);
+  ($('btn-download') as HTMLButtonElement).disabled = busy || (anim ? activeFrames().length < 2 : !result);
+}
+
 function updateLensInfo() {
+  updateExportButtons();
   const s = S();
   const n = activeFrames().length;
   const st = lensStats(s.lpi, s.dpi, Math.max(1, n));
@@ -1112,8 +1132,8 @@ async function generatePattern() {
 
 function setResult(r: RenderResult) {
   result = r;
-  ($('btn-download') as HTMLButtonElement).disabled = false;
   ($('btn-print') as HTMLButtonElement).disabled = false;
+  updateExportButtons();
   $('output-title').textContent =
     `${r.title} — ${r.width}×${r.height} px = ${(r.width / r.dpi).toFixed(3)}×${(r.height / r.dpi).toFixed(3)} in`;
   drawOutput();
@@ -1138,14 +1158,80 @@ function drawOutput() {
   ctx.drawImage(result.canvas, r.x, r.y, r.w, r.h);
 }
 
+/** Tilt preview at an arbitrary size (for GIF / video export). */
+const drawTilt: DrawFn = (ctx, W, H, t) => {
+  const s = S();
+  const ordered = s.reverse ? [...activeFrames()].reverse() : activeFrames();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = s.background;
+  ctx.fillRect(0, 0, W, H);
+  if (!ordered.length) return;
+  const out = outputPixels(s);
+  const pos = t * (ordered.length - 1);
+  const i0 = Math.floor(pos), i1 = Math.min(ordered.length - 1, i0 + 1);
+  const frac = $<HTMLInputElement>('preview-blend').checked ? pos - i0 : 0;
+  const draw = (f: Frame, alpha: number) => {
+    ctx.setTransform(...compose(scale(W / out.w, H / out.h), invert(previewMatrix(f, out))));
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(f.bitmap, 0, 0);
+  };
+  draw(ordered[i0], 1);
+  if (frac > 0.001) draw(ordered[i1], frac);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+};
+
+async function exportAnimation(kind: 'gif' | 'video') {
+  const frames = activeFrames();
+  if (frames.length < 2) return status('Need at least two frames.', 'error');
+  const s = S();
+  // GIFs get smaller and use fewer in-between steps to keep files reasonable
+  const { w, h } = animSize(s.widthIn / s.heightIn, kind === 'gif' ? 600 : 1280);
+  const positions = sweepPositions(frames.length, kind === 'gif' ? 3 : 4);
+  const fps = 25;
+  const base = `lenticular_preview_${frames.length}f`;
+  setBusy(true);
+  progress(0);
+  status(kind === 'gif' ? 'Encoding GIF…' : 'Recording video…', 'info', 120000);
+  try {
+    if (kind === 'gif') {
+      const blob = await encodeGif(drawTilt, w, h, positions, fps, progress);
+      await download(blob, `${base}.gif`);
+      status(`Saved ${(blob.size / 1e6).toFixed(1)} MB GIF (${w}×${h}).`);
+    } else {
+      const { blob, ext } = await recordVideo(drawTilt, w, h, positions, fps, 2, progress);
+      await download(blob, `${base}.${ext}`);
+      status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${ext.toUpperCase()} (${w}×${h}).`);
+    }
+  } finally {
+    setBusy(false);
+    progress(null);
+    updateExportButtons();
+  }
+}
+
 async function exportResult() {
+  const fmt0 = S().exportFormat;
+  if (fmt0 === 'gif' || fmt0 === 'video') {
+    try { await exportAnimation(fmt0); } catch (e) { status(`Export failed: ${(e as Error).message}`, 'error', 8000); }
+    return;
+  }
   if (!result) return;
   try {
     status('Encoding…', 'info', 30000);
     const fmt = S().exportFormat;
-    const blob = fmt === 'tiff' ? toTiff(result) : await toPng(result);
-    await download(blob, `${result.fileBase}.${fmt === 'tiff' ? 'tif' : 'png'}`);
-    status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${fmt.toUpperCase()} at ${result.dpi} DPI.`);
+    const ext = fmt === 'tiff' ? 'tif' : fmt;
+    let blob = fmt === 'tiff' ? toTiff(result) : fmt === 'jpg' ? await toJpeg(result) : await toPng(result);
+    let name = `${result.fileBase}.${ext}`;
+    if (fmt === 'tiff' && inArtifactHost()) {
+      // the artifact viewer can't save .tif files directly, so deliver it inside a zip
+      blob = new Blob([zipStore(name, new Uint8Array(await blob.arrayBuffer())) as BlobPart], { type: 'application/zip' });
+      name += '.zip';
+    }
+    await download(blob, name);
+    status(`Saved ${(blob.size / 1e6).toFixed(1)} MB ${ext.toUpperCase()} at ${result.dpi} DPI.`);
   } catch (e) {
     status(`Export failed: ${(e as Error).message}`, 'error', 8000);
   }
@@ -1328,11 +1414,14 @@ $('theme').addEventListener('change', (e) => {
   try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
 });
 
+if (!videoFormat()) {
+  $<HTMLElement>('export-format').querySelector<HTMLElement>('[data-format=video]')!.hidden = true;
+  if (S().exportFormat === 'video') S().exportFormat = 'png';
+}
+
 if (inArtifactHost()) {
-  // the sandboxed viewer can't open print dialogs or save TIFF files
+  // the sandboxed viewer can't open print dialogs
   $('btn-print').hidden = true;
-  $('export-format').querySelector('option[value=tiff]')?.remove();
-  if (S().exportFormat === 'tiff') S().exportFormat = 'png';
 }
 
 // Top-bar popup menus

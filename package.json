@@ -72,6 +72,7 @@
   },
   "dependencies": {
     "ag-psd": "^34.1.0",
+    "gifenc": "^1.0.3",
     "libheif-js": "^1.23.5",
     "utif2": "^4.1.0"
   }

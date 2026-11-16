@@ -209,10 +209,13 @@
           </div>
           <div class="progress" hidden><div id="progress-bar"></div></div>
           <div class="row">
-            <select id="export-format" aria-label="Export format">
-              <option value="png">PNG</option>
-              <option value="tiff">TIFF</option>
-            </select>
+            <div id="export-format" class="seg" role="radiogroup" aria-label="Export format">
+              <button type="button" role="radio" data-format="png">PNG</button>
+              <button type="button" role="radio" data-format="jpg">JPG</button>
+              <button type="button" role="radio" data-format="tiff">TIF</button>
+              <button type="button" role="radio" data-format="gif">GIF</button>
+              <button type="button" role="radio" data-format="video">Video</button>
+            </div>
             <button id="btn-download" class="btn small" disabled>Download</button>
             <button id="btn-print" class="btn small" disabled>Print…</button>
           </div>

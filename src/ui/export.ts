@@ -1,4 +1,4 @@
-import { encodeTiff, setPngDpi } from '../core/fileformats';
+import { encodeTiff, setJpegDpi, setPngDpi } from '../core/fileformats';
 
 export interface RenderResult {
   canvas: HTMLCanvasElement;
@@ -52,6 +52,13 @@ export async function toPng(r: RenderResult): Promise<Blob> {
   if (!blob) throw new Error('PNG encoding failed (image may be too large for this browser)');
   const tagged = setPngDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi);
   return new Blob([tagged as BlobPart], { type: 'image/png' });
+}
+
+export async function toJpeg(r: RenderResult, quality = 0.95): Promise<Blob> {
+  const blob = await new Promise<Blob | null>((res) => r.canvas.toBlob(res, 'image/jpeg', quality));
+  if (!blob) throw new Error('JPEG encoding failed (image may be too large for this browser)');
+  const tagged = setJpegDpi(new Uint8Array(await blob.arrayBuffer()), r.dpi);
+  return new Blob([tagged as BlobPart], { type: 'image/jpeg' });
 }
 
 export function toTiff(r: RenderResult): Blob {

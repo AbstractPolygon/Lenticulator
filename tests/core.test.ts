@@ -4,7 +4,7 @@ import { Gray, makeGray, sample } from '../src/core/gray';
 import { alignFrame, matchPoint, phaseCorrelate, similarityToParams } from '../src/core/align';
 import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
 import { apply, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
-import { crc32, encodeTiff, getPngDpi, setPngDpi } from '../src/core/fileformats';
+import { crc32, encodeTiff, getJpegDpi, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
 import { composePage, pitchTest } from '../src/core/patterns';
 import { mpoImageRanges } from '../src/core/mpo';
 
@@ -214,5 +214,25 @@ describe('mpo', () => {
 
   it('returns null for a plain JPEG', () => {
     expect(mpoImageRanges(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xda]))).toBeNull();
+  });
+});
+
+describe('jpeg dpi & zip', () => {
+  it('sets JFIF density', () => {
+    const jfif = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9]);
+    expect(getJpegDpi(setJpegDpi(jfif, 720))).toBe(720);
+    const bare = Uint8Array.from([0xff, 0xd8, 0xff, 0xdb, 0, 2, 0xff, 0xd9]);
+    const tagged = setJpegDpi(bare, 300);
+    expect(getJpegDpi(tagged)).toBe(300);
+    expect(tagged.length).toBe(bare.length + 18);
+  });
+
+  it('writes a valid single-file zip', () => {
+    const data = new TextEncoder().encode('hello lens');
+    const z = zipStore('a.tif', data);
+    const dv = new DataView(z.buffer);
+    expect(dv.getUint32(0, true)).toBe(0x04034b50);
+    expect(dv.getUint32(14, true)).toBe(crc32(data));
+    expect(dv.getUint32(z.length - 22, true)).toBe(0x06054b50);
   });
 });
