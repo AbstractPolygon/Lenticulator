@@ -110,24 +110,33 @@
   host.use('artifact').then(function (artifact) {
     if (!artifact) return;
     bar.hidden = false;
+    function failed(err) {
+      var code = err && err.code;
+      btn('save').disabled = false;
+      if (code === 'conflict') { msg.textContent = 'A newer version was published; reloading it.'; return; }
+      if (code === 'not_writer' || code === 'not_granted') {
+        msg.textContent = 'This view is read-only.';
+        btn('edit').hidden = true;
+        return;
+      }
+      msg.textContent = 'Could not save' + (code ? ' (' + code + ')' : '') + ': ' + ((err && err.message) || 'unknown error');
+      setEditing(true);
+    }
     btn('save').addEventListener('click', function () {
       btn('save').disabled = true;
       msg.textContent = 'Saving…';
       setEditing(false);
-      artifact.publish({ 'index.html': buildDocument() }).then(function () {
-        msg.textContent = 'Saved';
-      }, function (err) {
+      var html = buildDocument();
+      // files form keeps this view running and leaves the images untouched; the whole-page form is the fallback
+      artifact.publish({ 'index.html': html }).catch(function (err) {
         var code = err && err.code;
+        if (code === 'capability_disabled' || code === 'bad_request' || code === 'invalid_content') return artifact.publish(html);
+        throw err;
+      }).then(function () {
         btn('save').disabled = false;
-        if (code === 'conflict') { msg.textContent = 'A newer version was published; reloading it.'; return; }
-        if (code === 'not_writer' || code === 'not_granted') {
-          msg.textContent = 'This view is read-only.';
-          btn('edit').hidden = true;
-          return;
-        }
-        msg.textContent = 'Could not save: ' + ((err && err.message) || 'unknown error');
-        setEditing(true);
-      });
+        msg.textContent = 'Saved';
+        setTimeout(function () { if (msg.textContent === 'Saved') msg.textContent = ''; }, 3000);
+      }, failed);
     });
   });
 })();
