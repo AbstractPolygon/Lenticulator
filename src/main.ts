@@ -18,7 +18,7 @@ import { zipStore } from './core/fileformats';
 import { scanProfiles, splitScan } from './core/split';
 import { frameSequence } from './core/timing';
 import { estimateFlow, interpolate } from './core/flow';
-import { framesForLens } from './core/depth3d';
+import { framesForLens, maxDepthPercent } from './core/depth3d';
 import { DrawFn, animSize, encodeGif, recordVideo, sweepPositions, videoFormat } from './ui/animation';
 import { canvas2d, encodeBitmap, proxyBitmap, rgbaToBitmap } from './ui/canvas';
 import { CompareMode, drawCompare, drawTilt as drawTiltFrames } from './ui/draw';
@@ -141,6 +141,12 @@ function syncForm() {
   $<HTMLInputElement>('d-auto').checked = s.depthAuto;
   $<HTMLInputElement>('d-amount').value = String(s.depthAmount);
   $('d-amount-val').textContent = `${s.depthAmount.toFixed(1)}%`;
+  // depth budget: more parallax than the lens can show blurs and doubles the 3D print
+  const depthMax = maxDepthPercent(s.depthFrames, s.lpi, s.orientation === 'vertical' ? s.widthIn : s.heightIn);
+  const warn = $('d-amount-warn');
+  warn.hidden = !(s.depthAmount > depthMax + 1e-9);
+  warn.textContent = `⚠ max ${depthMax.toFixed(1)}%`;
+  warn.title = `More depth than a ${s.lpi} LPI lens shows cleanly with ${s.depthFrames} frames at this print size (about one lens pitch per frame). The 3D print will look blurred or doubled. Lower Depth, or use more frames.`;
   $<HTMLInputElement>('d-focus').value = String(s.depthFocus);
   $<HTMLInputElement>('d-invert').checked = s.depthInvert;
   $('depth-panel').hidden = s.mode !== '3d';

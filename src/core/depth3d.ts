@@ -30,6 +30,15 @@ export function framesForLens(lpi: number, dpi: number, min = 2, max = 48): numb
   return Math.max(min, Math.min(max, Math.floor(dpi / lpi)));
 }
 
+/**
+ * Largest depth (total parallax, % of the image along the lens direction) a lenticular lens shows cleanly:
+ * about one lens pitch per frame, i.e. frames ÷ LPI inches in total. More than this blurs and doubles.
+ */
+export function maxDepthPercent(frames: number, lpi: number, sizeIn: number): number {
+  if (!(lpi > 0) || !(sizeIn > 0)) return Infinity;
+  return (Math.max(1, frames) / lpi / sizeIn) * 100;
+}
+
 /** Normalise raw model output to 0..1 using robust (1st–99th percentile) limits. */
 export function normalizeDepth(raw: Float32Array, w: number, h: number): Gray {
   const sorted = Float32Array.from(raw).sort();

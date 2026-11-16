@@ -12,7 +12,7 @@ The **Depth** panel appears in **3D** mode.
 2. Click **Estimate depth**. The depth map appears in the panel: white is near, black is far. Alternatively click **Load depth map** to use your own (for example from a phone's portrait mode); tick **Invert** if white means far in your map.
 3. Adjust:
    - **Frames**: how many views to generate. With **Match LPI** ticked, this is DPI ÷ LPI, one view per printed dot under each lens.
-   - **Depth**: the strength of the effect, as total parallax in percent of the image width. Around 2–4% works well for most prints.
+   - **Depth**: the strength of the effect, as total parallax in percent of the image width (default 2.5%). A lens shows about one lens pitch of parallax per frame cleanly (frames ÷ LPI inches in total); above that the panel shows **⚠ max …%** and the print will look blurred or doubled.
    - **Focus**: which depth sits at the print surface. It shows as a **yellow line** on the depth map. Nearer things float in front, farther things sit behind.
 4. Click **Generate frames**. The frame list is replaced by the generated views; the middle view becomes the reference. You can change the settings and generate again.
 

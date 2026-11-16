@@ -4,6 +4,7 @@ import { Gray, makeGray, sample } from '../src/core/gray';
 import { alignFrame, matchPoint, phaseCorrelate, similarityToParams } from '../src/core/align';
 import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
 import { apply, cropToCommon, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
+import { maxDepthPercent } from '../src/core/depth3d';
 import { crc32, encodeTiff, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
 
 /** Read the DPI from a JPEG's JFIF header (or null). */
@@ -353,5 +354,13 @@ describe('cropToCommon', () => {
     const f = cropToCommon(out, ref, [{ size: ref, t: NO_TRANSFORM }, { size: ref, t: { ...NO_TRANSFORM, rotation: 3 } }])!;
     expect(f.zoom).toBeGreaterThan(1);
     expect(f.zoom).toBeLessThan(1.3);
+  });
+});
+
+describe('maxDepthPercent', () => {
+  it('allows about one lens pitch of parallax per frame', () => {
+    // 10 frames at 60 LPI = 1/6 in of parallax; on a 6 in wide print that is 2.78 %
+    expect(maxDepthPercent(10, 60, 6)).toBeCloseTo(2.78, 2);
+    expect(maxDepthPercent(20, 60, 6)).toBeCloseTo(5.56, 2);
   });
 });

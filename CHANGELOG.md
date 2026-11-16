@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.33
+- Depth budget: the Depth panel warns (⚠ max …%) when the depth is more than the lens shows cleanly for the frames,
+  LPI and print size (about one lens pitch per frame). The default depth is now 2.5 %.
+
 ## 0.3.32
 - **In-between** frames for GIFs and frame videos: up to 4 motion-interpolated frames between each pair, for a
   smoother wiggle at the same speed.

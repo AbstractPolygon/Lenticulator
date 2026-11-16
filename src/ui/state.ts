@@ -92,7 +92,7 @@ export const DEFAULT_SETTINGS: Settings = {
   psdLayers: false,
   depthFrames: 10,
   depthAuto: true,
-  depthAmount: 3,
+  depthAmount: 2.5,
   depthFocus: 0.5,
   depthInvert: false,
   tiffAllPages: true,
