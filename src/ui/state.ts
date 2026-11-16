@@ -72,7 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   alignMode: 'keypoint',
   exportFormat: 'png',
   gifFps: 10,
-  gifDither: 'none',
+  gifDither: 'atkinson',
   videoLoops: 2,
   psdLayers: false,
   depthFrames: 10,

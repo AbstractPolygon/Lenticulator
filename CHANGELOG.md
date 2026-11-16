@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.27
+- GIF dither defaults to Atkinson.
+- Alignment fixes: the GIF dither dropdown lines up with the fps field (and video loops likewise); Match LPI lines up
+  with the Frames field, and Reverse frame order with Sampling.
+
 ## 0.3.26
 - Zoom works on a rendered GIF or video in the Output tab (buttons, Fit, 100%, mouse wheel, keyboard), as it does
   in Preview, Align and on the rendered print.
