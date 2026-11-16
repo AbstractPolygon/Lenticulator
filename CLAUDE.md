@@ -30,7 +30,12 @@ The page declares the `downloads` capability (saves go through the host's save p
 - `site/index.html` is the landing page (GitHub Pages root; the app is deployed under `/app/`).
 - Installer file names include the version. **When a new desktop build is released (tag `vX.Y.Z`), update the
   download links and the version shown in `site/index.html`** to that release's files.
-- Tags publish public GitHub releases.
+- Releases: run the **Desktop builds** workflow with `publish` ticked (or push a `v*` tag); its final job creates
+  the public release `v<version>` and uploads all installers. Also add the version to "What's new" in `site/index.html`.
+- The website is also an editable claude.ai artifact: https://claude.ai/artifact/LCSDgkvLEXt6yZ2YjdgnTa
+  Build it with `node scripts/build-site-artifact.mjs` and publish `artifact-site/lenticulator-site.html` (declares the
+  `artifact` capability). When the user saves edits there, read the artifact and copy its `#page` block back into
+  `site/index.html`, then republish both.
 
 ## Conventions
 - Version lives in `package.json` (shown next to the app name). **Bump it with every change, patch only**:
