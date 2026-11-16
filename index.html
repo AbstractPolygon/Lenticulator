@@ -226,6 +226,7 @@
             <button id="btn-pick-key" title="Click the subject that should sit at the print surface" class="btn small" aria-pressed="false">Pick key point</button>
             <button id="btn-auto-align" title="Align all frames to the reference frame (★)" class="btn small primary">Auto-align</button>
             <button id="btn-reset-align" title="Clear the alignment of all frames" class="btn small">Reset</button>
+            <button id="btn-crop-common" title="Crop to the area every frame covers, so no blank edges show in the print, GIF or video" class="btn small">Crop to overlap</button>
           </div>
           <fieldset id="manual-align" class="manual">
             <legend>Selected frame <span id="sel-name"></span></legend>
@@ -254,6 +255,7 @@
             <label>Margin <input id="margin" title="White border around the image, for alignment bars and crop marks" type="number" min="0" step="0.05" /></label>
             <span></span>
             <label class="check"><input id="alignBars" title="Strips in the margin printed at the lens pitch. Rotate the lens sheet until they look uniform to line it up" type="checkbox" /> Lens alignment bars</label>
+            <label class="check"><input id="autoCrop" title="After auto-align, crop to the area every frame covers" type="checkbox" /> Auto crop</label>
             <label class="check"><input id="cropMarks" title="Corner marks showing where to cut" type="checkbox" /> Crop marks</label>
           </div>
         </details>

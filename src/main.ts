@@ -1,6 +1,6 @@
 import './styles.css';
 import {
-  Affine, FrameTransform, NO_TRANSFORM, alignMap, baseMap, compose, frameMatrix, invert, outputMap, scale, apply,
+  Affine, FrameTransform, NO_TRANSFORM, alignMap, baseMap, compose, cropToCommon, frameMatrix, invert, outputMap, scale, apply,
 } from './core/geometry';
 import { COMMON_DPI, COMMON_LPI, lensStats } from './core/interlace';
 import { similarityToParams } from './core/align';
@@ -113,6 +113,7 @@ function syncForm() {
   num('margin', s.marginIn * f);
   $<HTMLInputElement>('alignBars').checked = s.alignBars;
   $<HTMLInputElement>('cropMarks').checked = s.cropMarks;
+  $<HTMLInputElement>('autoCrop').checked = s.autoCrop;
   $<HTMLSelectElement>('align-mode').value = s.alignMode;
   document.querySelectorAll<HTMLButtonElement>('#export-format [data-format]').forEach((b) =>
     b.setAttribute('aria-checked', String(b.dataset.format === s.exportFormat)));
@@ -197,6 +198,7 @@ function bindSettings() {
   on('reverse', 'change', (el) => (S().reverse = el.checked));
   on('phase', 'input', (el) => (S().phase = +el.value));
   on('fit', 'change', (el) => (S().fit = el.value as Settings['fit']));
+  on('autoCrop', 'change', (el) => (S().autoCrop = el.checked));
   on('zoom', 'input', (el) => (S().zoom = +el.value));
   on('panX', 'input', (el) => (S().panX = +el.value));
   on('panY', 'input', (el) => (S().panY = +el.value));
@@ -927,6 +929,22 @@ function analysisGray(f: Frame, ref: Frame, aw: number, ah: number) {
   return rgbaToGray(id.data, aw, ah);
 }
 
+/** Frame the print on the area every enabled frame covers (no blank edges). */
+function cropToOverlap(quiet = false) {
+  const ref = refFrame();
+  const frames = activeFrames();
+  if (!ref || frames.length < 2) { if (!quiet) status('Import at least two images first.', 'error'); return; }
+  const s = S();
+  const f = cropToCommon({ w: s.widthIn, h: s.heightIn }, { w: ref.width, h: ref.height },
+    frames.map((fr) => ({ size: { w: fr.width, h: fr.height }, t: fr.transform })));
+  if (!f) { status('The frames don\'t overlap enough to crop.', 'error'); return; }
+  Object.assign(s, f);
+  saveSettings(s);
+  syncForm();
+  scheduleRedraw();
+  if (!quiet) status(`Cropped to the overlap (${Math.round(f.zoom * 100)}%).`);
+}
+
 async function autoAlign() {
   const ref = refFrame();
   if (!ref || state.frames.length < 2) return status('Import at least two images first.', 'error');
@@ -973,6 +991,7 @@ async function autoAlign() {
       low ? 'error' : 'info',
       6000,
     );
+    if (S().autoCrop) cropToOverlap(true);
   } catch (e) {
     status(`Alignment failed: ${(e as Error).message}`, 'error', 8000);
   } finally {
@@ -1408,6 +1427,7 @@ function bindChrome() {
     scheduleRedraw();
   });
   $('btn-auto-align').addEventListener('click', () => !busy && autoAlign());
+  $('btn-crop-common').addEventListener('click', () => !busy && cropToOverlap());
   $('btn-pick-key').addEventListener('click', () => setPicking(!pickingKey));
   $('btn-reset-align').addEventListener('click', () => {
     for (const f of state.frames) { f.transform = { ...NO_TRANSFORM }; f.confidence = undefined; }

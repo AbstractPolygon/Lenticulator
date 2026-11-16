@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.28
+- **Crop to overlap** (Alignment panel): frames the print on the area every frame covers, so no blank edges show in
+  the print, GIF or video. **Auto crop** (Framing & page, on by default) does this after every auto-align.
+
 ## 0.3.27
 - GIF dither defaults to Atkinson.
 - Alignment fixes: the GIF dither dropdown lines up with the fps field (and video loops likewise); Match LPI lines up

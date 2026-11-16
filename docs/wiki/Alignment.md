@@ -47,4 +47,6 @@ The overlay dropdown below the Align view compares the selected frame with the r
 
 ![Difference overlay](images/align-difference.jpg)
 
+**Crop to overlap** zooms and centres the print on the area every frame covers, so shifted or rotated frames never leave blank edges in the print, GIF or video. With **Auto crop** (Framing & page, on by default) this happens after every auto-align.
+
 **Show print area** outlines the part of the image that will be printed (yellow dashed line) and dims everything outside it. The same overlays are available in the Preview tab: see [Preview and Export](Preview-and-Export).

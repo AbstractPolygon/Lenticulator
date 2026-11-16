@@ -3,7 +3,7 @@ import { fft2d } from '../src/core/fft';
 import { Gray, makeGray, sample } from '../src/core/gray';
 import { alignFrame, matchPoint, phaseCorrelate, similarityToParams } from '../src/core/align';
 import { lensWeights, renderRows, lensStats } from '../src/core/interlace';
-import { apply, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
+import { apply, cropToCommon, frameMatrix, invert, mul, NO_TRANSFORM } from '../src/core/geometry';
 import { crc32, encodeTiff, getPngDpi, setJpegDpi, setPngDpi, zipStore } from '../src/core/fileformats';
 
 /** Read the DPI from a JPEG's JFIF header (or null). */
@@ -324,5 +324,34 @@ describe('banded rendering', () => {
   it('detects opaque pixels', () => {
     expect(isOpaque(Uint8ClampedArray.from([1, 2, 3, 255, 4, 5, 6, 255]))).toBe(true);
     expect(isOpaque(Uint8ClampedArray.from([1, 2, 3, 255, 4, 5, 6, 254]))).toBe(false);
+  });
+});
+
+describe('cropToCommon', () => {
+  const ref = { w: 1000, h: 800 };
+  const out = { w: 6, h: 4 };
+  it('leaves identical frames uncropped', () => {
+    const f = cropToCommon(out, ref, [{ size: ref, t: NO_TRANSFORM }, { size: ref, t: NO_TRANSFORM }])!;
+    expect(f.zoom).toBeCloseTo(1, 6);
+    expect(f.panX).toBeCloseTo(0, 6);
+  });
+  it('crops away the strip a shifted frame leaves empty', () => {
+    const shifted = { ...NO_TRANSFORM, dx: 100 };
+    const f = cropToCommon(out, ref, [{ size: ref, t: NO_TRANSFORM }, { size: ref, t: shifted }])!;
+    expect(f.zoom).toBeGreaterThan(1);
+    // every corner of the print lands inside both frames
+    for (const t of [NO_TRANSFORM, shifted]) {
+      const m = frameMatrix(out, ref, ref, t, f);
+      for (const [x, y] of [[0, 0], [out.w, 0], [out.w, out.h], [0, out.h]]) {
+        const [fx, fy] = apply(m, x, y);
+        expect(fx).toBeGreaterThanOrEqual(-1e-3); expect(fx).toBeLessThanOrEqual(ref.w + 1e-3);
+        expect(fy).toBeGreaterThanOrEqual(-1e-3); expect(fy).toBeLessThanOrEqual(ref.h + 1e-3);
+      }
+    }
+  });
+  it('handles rotated frames', () => {
+    const f = cropToCommon(out, ref, [{ size: ref, t: NO_TRANSFORM }, { size: ref, t: { ...NO_TRANSFORM, rotation: 3 } }])!;
+    expect(f.zoom).toBeGreaterThan(1);
+    expect(f.zoom).toBeLessThan(1.3);
   });
 });

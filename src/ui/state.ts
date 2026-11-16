@@ -26,6 +26,8 @@ export interface Settings {
   marginIn: number;
   alignBars: boolean;
   cropMarks: boolean;
+  /** after auto-align, crop to the region every frame covers */
+  autoCrop: boolean;
   alignMode: AlignMode;
   /** png/jpg/tiff export the rendered print; gif/video export an animated tilt preview */
   exportFormat: 'png' | 'jpg' | 'tiff' | 'gif' | 'video';
@@ -69,6 +71,7 @@ export const DEFAULT_SETTINGS: Settings = {
   marginIn: 0,
   alignBars: true,
   cropMarks: true,
+  autoCrop: true,
   alignMode: 'keypoint',
   exportFormat: 'png',
   gifFps: 10,

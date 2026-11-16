@@ -12,6 +12,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - *Whole image: shift + rotate + scale.* Phase correlation followed by a robust Gauss–Newton similarity fit on an image pyramid, accurate to sub-pixel level. Use it for hand-held shots and scans.
   - *Whole image: shift only.* Use it for tripod flip and animation frames.
   - *Key subject point (3D).* Click the subject that should sit at the print surface, and every frame is shifted so that point lines up. Foreground and background keep their parallax.
+  - *Crop to overlap* (automatic after auto-align): frames the print on the area every frame covers, so no blank edges show.
   - Manual fine-tuning: drag in the Align view, use the arrow keys, or type X/Y/rotation/scale. The view has onion-skin, difference, flicker and anaglyph overlays.
 - **Depth from a single photo** (3D mode → Depth panel): click **Estimate depth** to compute a depth map
   on your device with [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small)
