@@ -29,7 +29,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 - **Export** the print as PNG, JPG or TIFF, all tagged with the print DPI, or **Print** directly at exact physical size. Export an animated **GIF** or **video** (MP4, or WebM where MP4 isn't available) of the tilt preview to share. Inside the claude.ai artifact, TIFF downloads as a .zip.
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 
-- **Settings menu** (top bar): put the control panel on the left or right. **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
+- **Settings menu** (top bar): **Panel location** puts the control panel on the left or right. **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
 
 All processing happens locally. Images never leave your computer.
 

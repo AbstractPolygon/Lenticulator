@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2
+- Settings: "Panel" renamed to "Panel location".
+
 ## 0.3.1
 - Settings → Panel: show the control panel on the left or right.
 - Depth model parts use a `.wasm` extension so every static host serves them.
