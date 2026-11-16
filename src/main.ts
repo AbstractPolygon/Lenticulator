@@ -71,7 +71,8 @@ function progress(frac: number | null) {
 
 function setBusy(b: boolean) {
   busy = b;
-  for (const id of ['btn-render', 'btn-auto-align', 'btn-pattern', 'btn-depth-estimate', 'btn-depth-load']) ($(id) as HTMLButtonElement).disabled = b;
+  for (const id of ['btn-render', 'btn-pattern', 'btn-depth-estimate', 'btn-depth-load']) ($(id) as HTMLButtonElement).disabled = b;
+  updateAlignButtons();
   ($('btn-depth-generate') as HTMLButtonElement).disabled = b || !depthPanel?.hasSource();
   updateExportButtons();
 }
@@ -297,6 +298,15 @@ function updateLensInfo() {
 
 function updateAlignHint() {
   $('btn-pick-key').hidden = S().alignMode !== 'keypoint';
+  updateAlignButtons();
+}
+
+/** Auto-align is greyed out while busy, and in key-point mode until a key point is picked. */
+function updateAlignButtons() {
+  const btn = $('btn-auto-align') as HTMLButtonElement;
+  const needsKey = S().alignMode === 'keypoint' && !state.keyPoint;
+  btn.disabled = busy || needsKey;
+  btn.title = needsKey ? 'Pick a key point first' : 'Align all frames to the reference frame (★)';
 }
 
 // ---------------------------------------------------------------------------
@@ -557,6 +567,7 @@ function nudge(dx: number, dy: number) {
 
 let redrawQueued = false;
 function scheduleRedraw() {
+  updateAlignButtons(); // the key point may have been picked or cleared
   if (redrawQueued) return;
   redrawQueued = true;
   requestAnimationFrame(() => {

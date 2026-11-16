@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.34
+- In Key point mode, **Auto-align** is greyed out until a key point has been picked.
+
 ## 0.3.33
 - Depth budget: the Depth panel warns (⚠ max …%) when the depth is more than the lens shows cleanly for the frames,
   LPI and print size (about one lens pitch per frame). The default depth is now 2.5 %.
