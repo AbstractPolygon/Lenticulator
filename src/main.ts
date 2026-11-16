@@ -658,13 +658,17 @@ function drawAlign() {
 
 function bindViews() {
   const pc = $<HTMLCanvasElement>('preview-canvas');
-  pc.addEventListener('pointermove', (e) => {
+  // tilt only while the primary button is held (click or drag across the preview), not on plain hover
+  const tiltTo = (e: PointerEvent) => {
     if (playing || panning) return;
     const r = pc.getBoundingClientRect();
     viewT = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     $<HTMLInputElement>('view').value = String(viewT);
     scheduleRedraw();
-  });
+  };
+  // after the other pointerdown listeners, so a pan that starts with this press wins
+  pc.addEventListener('pointerdown', (e) => { if (e.button === 0) queueMicrotask(() => tiltTo(e)); });
+  pc.addEventListener('pointermove', (e) => { if (e.buttons & 1) tiltTo(e); });
   $('view').addEventListener('input', (e) => {
     viewT = +(e.target as HTMLInputElement).value;
     scheduleRedraw();

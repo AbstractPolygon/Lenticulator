@@ -4,7 +4,7 @@
 
 The **Preview** tab simulates tilting the finished print.
 
-- Move the mouse across the preview, drag the slider, or press **Play**.
+- Click or drag across the preview, drag the playhead, or press **Play**.
 - **Smooth** blends between neighbouring frames (off by default).
 - The mode dropdown switches between **Tilt** and the comparison overlays **Onion skin**, **Difference** and **Flicker** (current view versus the reference frame). **Anaglyph** (3D only) shows two views in red/cyan for viewing with 3D glasses.
 

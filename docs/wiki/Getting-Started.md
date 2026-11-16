@@ -38,7 +38,7 @@ npm run dist:mac
 2. **Add frames.** Drag images or a whole folder onto the window, click the import button, or pick a set from the **Samples** menu. See [Importing Frames](Importing-Frames).
 3. **Set up the print.** Choose the size, your printer's **DPI** and your lens **LPI**. See [Print and Lens Settings](Print-and-Lens-Settings).
 4. **Align the frames.** Click **Auto-align**. For 3D, click **Pick key point** first and click the subject that should sit at the print surface. See [Alignment](Alignment).
-5. **Check the preview.** Move the mouse across the **Preview** tab to simulate tilting the print.
+5. **Check the preview.** Drag across the **Preview** tab to simulate tilting the print.
 6. **Render and export.** Choose PNG, JPG or TIF, click **Render**, then **Download** or **Print…**. See [Preview and Export](Preview-and-Export).
 
 ![Samples menu](images/samples-menu.png)

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.25
+- Preview: the playhead only follows the mouse while the button is held (click or drag across the preview), not on hover.
+
 ## 0.3.24
 - Logo: just the lines, without the square (purple in light mode, blue in dark mode). Also on the website.
 
