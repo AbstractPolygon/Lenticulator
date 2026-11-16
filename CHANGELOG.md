@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.6
+- Top-bar icon buttons spaced closer together.
+
 ## 0.3.5
 - About panel (top bar, left of Settings): version, source repository, app license, and licenses of the depth model, libraries and sample images.
 - Top-bar icon buttons drawn without a button box.

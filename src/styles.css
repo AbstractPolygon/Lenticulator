@@ -74,8 +74,8 @@ body {
   padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
 }
-.topbar .actions { display: flex; gap: 8px; flex-wrap: wrap; -webkit-app-region: no-drag; }
-.btn.icon { padding: 0; width: 34px; height: 34px; border-color: transparent; background: transparent; color: var(--text); }
+.topbar .actions { display: flex; gap: 0; flex-wrap: wrap; -webkit-app-region: no-drag; }
+.btn.icon { padding: 0; width: 32px; height: 32px; border-color: transparent; background: transparent; color: var(--text); }
 .btn.icon.primary { color: var(--accent); background: transparent; border-color: transparent; }
 .btn.icon:hover:not(:disabled), .btn.icon[aria-expanded=true] { background: var(--panel-2); filter: none; }
 .menu { position: relative; }
