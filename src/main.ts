@@ -9,7 +9,7 @@ import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
 import {
   AppState, Frame, SIZE_PRESETS, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
 } from './ui/state';
-import { base64ToBlob, blobToBase64, decode, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
+import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, pixels, splitMultiPicture, thumbnail, uid } from './ui/images';
 import { WorkerClient } from './ui/workerClient';
 import type { FrameRef, WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toPng, toTiff } from './ui/export';
@@ -205,7 +205,7 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
         added++;
       }
     } catch (e) {
-      status(`Could not read ${baseName}: ${(e as Error).message}`, 'error', 6000);
+      status(`Could not open ${baseName}: this image format isn’t supported here (try JPEG, PNG or WebP).`, "error", 6000);
     }
   }
   if (added) status(`Added ${added} frame(s).`);
@@ -976,7 +976,7 @@ function bindChrome() {
     b.addEventListener('click', () => showTab(b.dataset.tab!)));
   $<HTMLInputElement>('file-input').addEventListener('change', (e) => {
     const input = e.target as HTMLInputElement;
-    const files = [...(input.files ?? [])].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    const files = [...(input.files ?? [])].filter(isImageFile).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     importFiles(files).finally(() => (input.value = ''));
   });
   $<HTMLInputElement>('project-input').addEventListener('change', (e) => {
@@ -1049,11 +1049,15 @@ function bindChrome() {
   window.addEventListener('drop', (e) => {
     depth = 0;
     document.body.classList.remove('dragging');
-    if (!e.dataTransfer?.files.length) return;
+    const dt = e.dataTransfer;
+    if (!dt || !dt.types.includes('Files')) return;
     e.preventDefault();
-    const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/') || /\.(mpo|jps|heic|avif)$/i.test(f.name));
-    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    importFiles(files);
+    filesFromDrop(dt)
+      .then((files) => {
+        if (!files.length) return status('No images found in what was dropped.', 'error');
+        return importFiles(files);
+      })
+      .catch((err) => status(`Could not read the dropped items: ${(err as Error).message}`, 'error', 6000));
   });
 }
 
@@ -1084,6 +1088,24 @@ if (inArtifactHost()) {
   $('btn-print').hidden = true;
   $('export-format').querySelector('option[value=tiff]')?.remove();
   if (S().exportFormat === 'tiff') S().exportFormat = 'png';
+}
+
+// Settings menu (top bar)
+{
+  const btn = $('btn-settings');
+  const panel = $('settings-panel');
+  const setOpen = (open: boolean) => {
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) panel.querySelector<HTMLElement>('select, input, button')?.focus();
+  };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden !== false); });
+  document.addEventListener('pointerdown', (e) => {
+    if (!panel.hidden && !panel.contains(e.target as Node) && !btn.contains(e.target as Node)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); }
+  });
 }
 
 fillStaticOptions();

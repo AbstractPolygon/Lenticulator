@@ -4,7 +4,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 
 ## Features
 
-- **Import frames** from JPEG, PNG, WebP and other browser-readable formats, plus **MPO** files from 3D cameras (split automatically). Drag to reorder, exclude frames, and pick the alignment reference (★).
+- **Import frames** with the button or by dragging **images or whole folders** (subfolders included) anywhere onto the window. Files are sorted by name, numerically (`frame2` before `frame10`). Supported formats: JPEG, PNG, WebP, GIF (first frame), BMP, AVIF, SVG and ICO, plus **MPO** files from 3D cameras (split automatically). HEIC and TIFF open only where the browser engine can decode them, which Chromium and the desktop app cannot. Drag to reorder, exclude frames, and pick the alignment reference (★).
 - **Auto-align**
   - *Whole image: shift + rotate + scale.* Phase correlation followed by a robust Gauss–Newton similarity fit on an image pyramid, accurate to sub-pixel level. Use it for hand-held shots and scans.
   - *Whole image: shift only.* Use it for tripod flip and animation frames.
@@ -20,7 +20,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
 - **Export** as PNG or uncompressed TIFF, both tagged with the print DPI, or **Print** directly at exact physical size.
 - **Projects:** save and reopen everything (frames, alignment, settings) as a single `.lenti.json` file.
 
-- **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
+- **Settings menu** (top bar) → **Themes:** System (follows your OS light/dark setting), Light, Dark and High contrast, remembered per device.
 
 All processing happens locally. Images never leave your computer.
 

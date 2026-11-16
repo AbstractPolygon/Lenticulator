@@ -83,3 +83,61 @@ export function base64ToBlob(b64: string, type: string): Blob {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Blob([bytes], { type });
 }
+
+/** File extensions offered for import (decoding depends on the browser engine). */
+export const IMAGE_EXT = /\.(jpe?g|jfif|png|webp|gif|bmp|avif|ico|svg|mpo|jps|heic|heif|tiff?)$/i;
+
+export function isImageFile(f: File): boolean {
+  if (f.name.startsWith('.')) return false; // macOS "._" resource forks, hidden files
+  return f.type.startsWith('image/') || IMAGE_EXT.test(f.name);
+}
+
+/**
+ * Collect image files from a drop, descending into dropped folders.
+ * Must be called synchronously inside the drop handler (items expire after it).
+ * Returned files are sorted by path, numerically ("frame2" before "frame10").
+ */
+export function filesFromDrop(dt: DataTransfer): Promise<File[]> {
+  type Entry = FileSystemEntry & { fullPath: string };
+  const entries: Entry[] = [];
+  const loose: File[] = [];
+  for (const item of Array.from(dt.items ?? [])) {
+    if (item.kind !== 'file') continue;
+    const entry = item.webkitGetAsEntry?.() as Entry | null;
+    if (entry) entries.push(entry);
+    else {
+      const f = item.getAsFile();
+      if (f) loose.push(f);
+    }
+  }
+  if (!entries.length && !loose.length) loose.push(...Array.from(dt.files));
+
+  const out: { path: string; file: File }[] = loose.map((f) => ({ path: f.name, file: f }));
+  const readFile = (e: FileSystemFileEntry) => new Promise<File>((res, rej) => e.file(res, rej));
+  const readAll = async (dir: FileSystemDirectoryEntry) => {
+    const reader = dir.createReader();
+    const all: FileSystemEntry[] = [];
+    // readEntries returns results in batches (≈100) until an empty batch
+    for (;;) {
+      const batch = await new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej));
+      if (!batch.length) break;
+      all.push(...batch);
+    }
+    return all;
+  };
+  const walk = async (e: FileSystemEntry): Promise<void> => {
+    if (e.name.startsWith('.')) return;
+    if (e.isFile) {
+      const f = await readFile(e as FileSystemFileEntry);
+      out.push({ path: e.fullPath || f.name, file: f });
+    } else if (e.isDirectory) {
+      for (const c of await readAll(e as FileSystemDirectoryEntry)) await walk(c);
+    }
+  };
+  return Promise.all(entries.map(walk)).then(() =>
+    out
+      .filter((o) => isImageFile(o.file))
+      .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+      .map((o) => o.file),
+  );
+}

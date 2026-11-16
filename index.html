@@ -18,7 +18,7 @@
       </div>
       <div class="actions">
         <label class="btn primary" title="Import images (JPEG, PNG, WebP, MPO…)">
-          <input id="file-input" type="file" accept="image/*,.mpo" multiple hidden />
+          <input id="file-input" type="file" accept="image/*,.mpo,.jps" multiple hidden />
           Import images
         </label>
         <button id="btn-save-project" class="btn">Save project</button>
@@ -26,12 +26,27 @@
           <input id="project-input" type="file" accept=".json,.lenti,application/json" hidden />
           Open project
         </label>
-        <select id="theme" class="theme-select" aria-label="Theme" title="Theme">
-          <option value="system">Theme: System</option>
-          <option value="light">Theme: Light</option>
-          <option value="dark">Theme: Dark</option>
-          <option value="contrast">Theme: High contrast</option>
-        </select>
+        <div class="menu">
+          <button id="btn-settings" class="btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-panel">
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            Settings
+          </button>
+          <div id="settings-panel" class="menu-panel" role="dialog" aria-label="Settings" hidden>
+            <div class="menu-title">Settings</div>
+            <section class="menu-section">
+              <div class="menu-heading">Appearance</div>
+              <label>Theme
+                <select id="theme">
+                  <option value="system">System (match OS)</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="contrast">High contrast</option>
+                </select>
+              </label>
+            </section>
+            <!-- more settings sections go here -->
+          </div>
+        </div>
       </div>
     </header>
 
@@ -77,7 +92,7 @@
         <details open class="panel">
           <summary>Frames <span id="frame-count" class="badge">0</span></summary>
           <div id="dropzone" class="dropzone">
-            Drop images here, or use <b>Import images</b>.<br />
+            Drop images or folders anywhere, or use <b>Import images</b>.<br />
             <small>Drag to reorder · ★ = alignment reference</small>
           </div>
           <ol id="frame-list" class="frame-list"></ol>
@@ -227,6 +242,12 @@
         </section>
         <div id="status" class="status" role="status" aria-live="polite"></div>
       </main>
+    </div>
+    <div class="drop-overlay" aria-hidden="true">
+      <div class="drop-card">
+        <strong>Drop to add frames</strong>
+        <span>Images or folders of images · sorted by file name</span>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
