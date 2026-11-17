@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.42
+- The Printer preset groups printers by brand (Canon, Epson, HP).
+
 ## 0.3.41
 - Printer presets for popular photo printers: Canon PIXMA, PIXMA PRO-200 / PRO-100, imagePROGRAF PRO-300 and
   SELPHY; Epson EcoTank Photo, Expression Photo and SureColor P700 / P900; HP ENVY / Smart Tank.

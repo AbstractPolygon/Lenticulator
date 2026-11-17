@@ -89,9 +89,12 @@ function fillStaticOptions() {
   const opts = (px: boolean) => SIZE_PRESETS.map((p, i) => (!!p.px === px ? `<option value="${i}">${p.label}</option>` : '')).join('');
   preset.innerHTML = `<option value="">Custom</option><optgroup label="Print">${opts(false)}</optgroup><optgroup label="Social">${opts(true)}</optgroup>`;
   $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
-  const printers = (model: boolean) => PRINTER_PRESETS.map((p, i) =>
-    (!!p.model === model ? `<option value="${i}"${model ? ` title="${p.dpi} DPI"` : ''}>${p.label}</option>` : '')).join('');
-  $('printer-preset').innerHTML = `<option value="">Custom</option><optgroup label="Printer">${printers(true)}</optgroup><optgroup label="Resolution">${printers(false)}</optgroup>`;
+  const printers = (brand?: string) => PRINTER_PRESETS.map((p, i) =>
+    (p.brand === brand ? `<option value="${i}"${brand ? ` title="${p.dpi} DPI"` : ''}>${p.label}</option>` : '')).join('');
+  const brands = [...new Set(PRINTER_PRESETS.map((p) => p.brand).filter((b): b is string => !!b))];
+  $('printer-preset').innerHTML = '<option value="">Custom</option>'
+    + brands.map((b) => `<optgroup label="${b}">${printers(b)}</optgroup>`).join('')
+    + `<optgroup label="Resolution">${printers()}</optgroup>`;
   $('lens-preset').innerHTML = '<option value="">Custom</option>' + LENS_PRESETS.map((l) => `<option value="${l}">${l} LPI</option>`).join('');
   $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
 }
@@ -165,7 +168,7 @@ function syncForm() {
   const pp = $<HTMLSelectElement>('printer-preset');
   if (!(pp.value !== '' && PRINTER_PRESETS[+pp.value]?.dpi === s.dpi)) {
     // a typed DPI shows the generic resolution, not whichever printer model happens to share it
-    const g = PRINTER_PRESETS.findIndex((p) => !p.model && p.dpi === s.dpi);
+    const g = PRINTER_PRESETS.findIndex((p) => !p.brand && p.dpi === s.dpi);
     const k = g >= 0 ? g : PRINTER_PRESETS.findIndex((p) => p.dpi === s.dpi);
     pp.value = k >= 0 ? String(k) : '';
   }
