@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.52
+- Printer presets for the 25 best-selling models now use their specified base resolution, 1200 DPI (HP "1200 x 1200
+  rendered", Canon "4800 x 1200", Brother "1200 x 6000"; the larger number is drop placement, not the grid).
+
 ## 0.3.51
 - Printer presets for the 25 best-selling inkjet printers on Amazon (HP DeskJet, ENVY and OfficeJet Pro; Canon
   PIXMA TR / TS and MegaTank; Brother Work Smart and INKvestment; Epson WorkForce Pro WF-4930).
