@@ -34,7 +34,7 @@ The page declares the `downloads` capability (saves go through the host's save p
 - **Every release (user requirement):** whenever the user asks for a release, also update the version in the wiki's About
   page (`docs/wiki/About.md`, shown as `X.Y.Z (beta)` and linked to the release), along with the website links.
 - Releases: run the **Desktop builds** workflow with `publish` ticked (or push a `v*` tag); its final job creates
-  the public release `v<version>` and uploads all installers. Also add the version to "What's new" in `site/index.html`.
+  the public release `v<version>` and uploads all installers. Also add the version to "What's new" in `site/index.html`. **Keep only the 4 newest entries** there (drop the oldest when adding one); the "All release notes" link below them covers the rest.
 - The website is also an editable claude.ai artifact: https://claude.ai/artifact/LCSDgkvLEXt6yZ2YjdgnTa
   **ALWAYS republish it immediately after every change to `site/` (user requirement), just like the app artifact.**
   Build it with `node scripts/build-site-artifact.mjs` and publish `artifact-site/lenticulator-site.html` (declares the
