@@ -238,7 +238,7 @@ export const PRINTER_PRESETS: { brand?: string; label: string; dpi: number }[] =
   { brand: 'Epson', label: 'SureColor P700 / P900', dpi: 720 },
   { brand: 'HP', label: 'ENVY / Smart Tank', dpi: 600 },
   // plain resolutions: the common printer DPIs
-  ...COMMON_DPI.map((dpi) => ({ label: String(dpi), dpi })),
+  ...COMMON_DPI.map((dpi) => ({ label: `${dpi} DPI`, dpi })),
 ];
 
 /** Common lenticular sheet pitches. */

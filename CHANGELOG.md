@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.49
+- Printer presets: the Resolution entries read "600 DPI" etc. again.
+
 ## 0.3.48
 - Printer presets: the Resolution group lists the common DPIs (300 – 2880) without brand names.
 - Printer preset for the Epson Stylus Photo series.
