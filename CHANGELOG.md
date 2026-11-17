@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.46
+- Printer preset resolutions are shown as plain numbers (e.g. Epson → 1440).
+
 ## 0.3.45
 - Printer presets are all listed by brand: each brand's plain resolutions (e.g. Epson 720 / 1440 / 2880 DPI) sit
   under it next to its printers, and laser printers have their own group.
