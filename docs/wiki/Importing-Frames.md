@@ -36,7 +36,7 @@ Import a video (MP4, MOV, M4V or WebM) like any image: Lenticulator takes evenly
 
 ## Film-camera scans
 
-Multi-lens film cameras (Nimslo, Nishika N8000, Reto3D …) put 3 or 4 small frames side by side on the film. Import the scan, select it, and choose **Split scan → 2, 3 or 4 frames** in the Frames panel: Lenticulator finds the gaps between the frames, trims the film border and replaces the scan with equal-size frames, ready to align.
+Multi-lens film cameras (Nimslo, Nishika N8000, Reto3D …) put 3 or 4 small frames side by side on the film. Import the scan, select it, and choose your camera under **Split scan** in the Frames panel (Nimslo 3D, Nishika N8000 / N9000, Vivitar 3D, Reto3D, ImageTech 3D Wizard, Loreo 3D), or 2, 3 or 4 frames for any other camera: Lenticulator finds the gaps between the frames, trims the film border and replaces the scan with equal-size frames, ready to align.
 
 ## Sample sets
 

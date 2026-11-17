@@ -195,9 +195,19 @@
             <button id="btn-clear" title="Remove all frames (click twice)" class="btn small danger">Remove all</button>
             <select id="split-scan" class="small" aria-label="Split scan" title="Split the selected frame, a film scan with frames side by side (Nimslo, Nishika, Reto3D …), into separate frames">
               <option value="" selected disabled>Split scan</option>
-              <option value="2">2 frames</option>
-              <option value="3">3 frames</option>
-              <option value="4">4 frames</option>
+              <optgroup label="Camera">
+                <option value="4" title="4 lenses">Nimslo 3D</option>
+                <option value="4" title="4 lenses">Nishika N8000 / N9000</option>
+                <option value="4" title="4 lenses">Vivitar 3D</option>
+                <option value="3" title="3 lenses">Reto3D</option>
+                <option value="3" title="3 lenses">ImageTech 3D Wizard</option>
+                <option value="2" title="2 lenses">Loreo 3D</option>
+              </optgroup>
+              <optgroup label="Frames">
+                <option value="2">2 frames</option>
+                <option value="3">3 frames</option>
+                <option value="4">4 frames</option>
+              </optgroup>
             </select>
           </div>
         </details>

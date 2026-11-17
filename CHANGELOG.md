@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.40
+- **Split scan** lists known film cameras by name (Nimslo 3D, Nishika N8000 / N9000, Vivitar 3D, Reto3D,
+  ImageTech 3D Wizard, Loreo 3D); 2, 3 or 4 frames are still there for other cameras.
+
 ## 0.3.39
 - Projects keep the depth map stored in iPhone portrait photos, so **Estimate depth** still uses it after
   reopening a saved project.
