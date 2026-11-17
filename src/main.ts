@@ -245,7 +245,10 @@ function bindSettings() {
   on('reverse', 'change', (el) => (S().reverse = el.checked));
   on('phase', 'input', (el) => (S().phase = +el.value));
   on('fit', 'change', (el) => (S().fit = el.value as Settings['fit']));
-  on('autoCrop', 'change', (el) => (S().autoCrop = el.checked));
+  on('autoCrop', 'change', (el) => {
+    S().autoCrop = el.checked;
+    if (el.checked) cropToOverlap(activeFrames().length < 2); else uncropOverlap();
+  });
   on('zoom', 'input', (el) => (S().zoom = +el.value));
   on('panX', 'input', (el) => (S().panX = +el.value));
   on('panY', 'input', (el) => (S().panY = +el.value));
@@ -1040,6 +1043,20 @@ function analysisGray(f: Frame, ref: Frame, aw: number, ah: number) {
   return rgbaToGray(id.data, aw, ah);
 }
 
+/** Framing from before "Crop to overlap" changed it, restored when the checkbox is cleared. */
+let precrop: { fit: 'cover' | 'contain'; zoom: number; panX: number; panY: number } | null = null;
+
+/** Put the framing back as it was before the crop. */
+function uncropOverlap() {
+  if (!precrop) return;
+  const s = S();
+  Object.assign(s, precrop);
+  precrop = null;
+  saveSettings(s);
+  syncForm();
+  scheduleRedraw();
+}
+
 /** Frame the print on the area every enabled frame covers (no blank edges). */
 function cropToOverlap(quiet = false) {
   const ref = refFrame();
@@ -1049,6 +1066,7 @@ function cropToOverlap(quiet = false) {
   const f = cropToCommon({ w: s.widthIn, h: s.heightIn }, { w: ref.width, h: ref.height },
     frames.map((fr) => ({ size: { w: fr.width, h: fr.height }, t: fr.transform })));
   if (!f) { status('The frames don\'t overlap enough to crop.', 'error'); return; }
+  precrop ??= { fit: s.fit, zoom: s.zoom, panX: s.panX, panY: s.panY };
   Object.assign(s, f);
   saveSettings(s);
   syncForm();
@@ -1511,6 +1529,7 @@ async function openProject(file: File) {
     for (const f of [...state.frames]) removeFrame(f.id);
     // nothing from the previous project may leak into this one
     depthPanel?.reset();
+    precrop = null;
     setResult(null);
     state.settings = { ...loadSettings(), ...proj.settings };
     saveSettings(S());
@@ -1592,7 +1611,6 @@ function bindChrome() {
     scheduleRedraw();
   });
   $('btn-auto-align').addEventListener('click', () => !busy && autoAlign());
-  $('btn-crop-common').addEventListener('click', () => !busy && cropToOverlap());
   $('btn-pick-key').addEventListener('click', () => setPicking(!pickingKey));
   $('btn-reset-align').addEventListener('click', () => {
     for (const f of state.frames) { f.transform = { ...NO_TRANSFORM }; f.confidence = undefined; }

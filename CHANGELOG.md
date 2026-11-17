@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.53
+- **Crop to overlap** is now a checkbox (replacing the button and the separate Auto crop option): checking it crops
+  to the area every frame covers, and unchecking it restores the previous framing.
+
 ## 0.3.52
 - Printer presets for the 25 best-selling models now use their specified base resolution, 1200 DPI (HP "1200 x 1200
   rendered", Canon "4800 x 1200", Brother "1200 x 6000"; the larger number is drop placement, not the grid).
