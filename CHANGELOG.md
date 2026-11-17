@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.47
+- Printer presets: back to printers grouped by brand plus a separate Resolution group (Epson 720 / 1440 / 2880,
+  Canon / HP 600 / 1200 / 2400, Laser 600 / 1200).
+
 ## 0.3.46
 - Printer preset resolutions are shown as plain numbers (e.g. Epson → 1440).
 

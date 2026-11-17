@@ -226,27 +226,24 @@ export function lensStats(lpi: number, dpi: number, frames: number) {
 export const COMMON_LPI = [10, 15, 20, 25, 30, 40, 50, 60, 62, 75, 100, 120, 150, 161];
 export const COMMON_DPI = [300, 360, 600, 720, 1200, 1440, 2400, 2880];
 
-/** Printers by brand, with their native resolution (the DPI to use); `res` entries are a brand's plain resolutions. */
-export const PRINTER_PRESETS: { brand: string; label: string; dpi: number; res?: boolean }[] = [
+/** Printers by brand, with their native resolution (the DPI to use), then plain resolutions (no brand). */
+export const PRINTER_PRESETS: { brand?: string; label: string; dpi: number }[] = [
   { brand: 'Canon', label: 'PIXMA', dpi: 600 },
   { brand: 'Canon', label: 'PIXMA PRO-200 / PRO-100', dpi: 600 },
   { brand: 'Canon', label: 'imagePROGRAF PRO-300', dpi: 600 },
   { brand: 'Canon', label: 'SELPHY', dpi: 300 },
-  { brand: 'Canon', label: '600', dpi: 600, res: true },
-  { brand: 'Canon', label: '1200', dpi: 1200, res: true },
-  { brand: 'Canon', label: '2400', dpi: 2400, res: true },
   { brand: 'Epson', label: 'EcoTank Photo', dpi: 720 },
   { brand: 'Epson', label: 'Expression Photo', dpi: 720 },
   { brand: 'Epson', label: 'SureColor P700 / P900', dpi: 720 },
-  { brand: 'Epson', label: '720', dpi: 720, res: true },
-  { brand: 'Epson', label: '1440', dpi: 1440, res: true },
-  { brand: 'Epson', label: '2880', dpi: 2880, res: true },
   { brand: 'HP', label: 'ENVY / Smart Tank', dpi: 600 },
-  { brand: 'HP', label: '600', dpi: 600, res: true },
-  { brand: 'HP', label: '1200', dpi: 1200, res: true },
-  { brand: 'HP', label: '2400', dpi: 2400, res: true },
-  { brand: 'Laser', label: '600', dpi: 600, res: true },
-  { brand: 'Laser', label: '1200', dpi: 1200, res: true },
+  { label: 'Epson 720', dpi: 720 },
+  { label: 'Epson 1440', dpi: 1440 },
+  { label: 'Epson 2880', dpi: 2880 },
+  { label: 'Canon / HP 600', dpi: 600 },
+  { label: 'Canon / HP 1200', dpi: 1200 },
+  { label: 'Canon / HP 2400', dpi: 2400 },
+  { label: 'Laser 600', dpi: 600 },
+  { label: 'Laser 1200', dpi: 1200 },
 ];
 
 /** Common lenticular sheet pitches. */

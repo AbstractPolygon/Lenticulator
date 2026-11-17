@@ -3,6 +3,7 @@ import {
   Affine, FrameTransform, NO_TRANSFORM, alignMap, baseMap, compose, cropToCommon, frameMatrix, invert, outputMap, scale, apply,
 } from './core/geometry';
 import { COMMON_DPI, COMMON_LPI, LENS_PRESETS, PRINTER_PRESETS, lensStats } from './core/interlace';
+
 import { similarityToParams } from './core/align';
 import { rgbaToGray } from './core/gray';
 import { frameColor, lensRuler, pitchTest, Pattern } from './core/patterns';
@@ -28,6 +29,9 @@ import { gpuAvailable, renderGpu } from './ui/gpuRender';
 import { composePage } from './core/patterns';
 import { bindMenu, bindPref } from './ui/menus';
 import { initDepthPanel } from './ui/depthPanel';
+
+/** stable id of a printer preset, stored in settings */
+const presetKey = (p: { brand?: string; label: string }) => (p.brand ? `${p.brand} ${p.label}` : p.label);
 
 // ---------------------------------------------------------------------------
 // State
@@ -89,10 +93,12 @@ function fillStaticOptions() {
   const opts = (px: boolean) => SIZE_PRESETS.map((p, i) => (!!p.px === px ? `<option value="${i}">${p.label}</option>` : '')).join('');
   preset.innerHTML = `<option value="">Custom</option><optgroup label="Print">${opts(false)}</optgroup><optgroup label="Social">${opts(true)}</optgroup>`;
   $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
-  const brands = [...new Set(PRINTER_PRESETS.map((p) => p.brand))];
-  $('printer-preset').innerHTML = '<option value="">Custom</option>' + brands.map((b) => `<optgroup label="${b}">${
-    PRINTER_PRESETS.map((p, i) => (p.brand === b ? `<option value="${i}"${p.res ? '' : ` title="${p.dpi} DPI"`}>${p.label}</option>` : '')).join('')
-  }</optgroup>`).join('');
+  const printers = (brand?: string) => PRINTER_PRESETS.map((p, i) =>
+    (p.brand === brand ? `<option value="${i}"${brand ? ` title="${p.dpi} DPI"` : ''}>${p.label}</option>` : '')).join('');
+  const brands = [...new Set(PRINTER_PRESETS.map((p) => p.brand).filter((b): b is string => !!b))];
+  $('printer-preset').innerHTML = '<option value="">Custom</option>'
+    + brands.map((b) => `<optgroup label="${b}">${printers(b)}</optgroup>`).join('')
+    + `<optgroup label="Resolution">${printers()}</optgroup>`;
   $('lens-preset').innerHTML = '<option value="">Custom</option>' + LENS_PRESETS.map((l) => `<option value="${l}">${l} LPI</option>`).join('');
   $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
 }
@@ -164,12 +170,9 @@ function syncForm() {
   const pi = matchPreset(s);
   // printer / lens presets show the one matching the typed values (a printer keeps its pick when DPIs are shared)
   const pp = $<HTMLSelectElement>('printer-preset');
-  // the picked printer while the DPI is still its own; else a typed DPI that only one brand uses (e.g. Epson 1440)
-  let k = PRINTER_PRESETS.findIndex((p) => `${p.brand} ${p.label}` === s.printer && p.dpi === s.dpi);
-  if (k < 0) {
-    const res = PRINTER_PRESETS.filter((p) => p.res && p.dpi === s.dpi);
-    if (res.length === 1) k = PRINTER_PRESETS.indexOf(res[0]);
-  }
+  // the picked entry while the DPI is still its own; else a typed DPI shows its plain resolution
+  let k = PRINTER_PRESETS.findIndex((p) => presetKey(p) === s.printer && p.dpi === s.dpi);
+  if (k < 0) k = PRINTER_PRESETS.findIndex((p) => !p.brand && p.dpi === s.dpi);
   pp.value = k >= 0 ? String(k) : '';
   $<HTMLSelectElement>('lens-preset').value = LENS_PRESETS.includes(s.lpi) ? String(s.lpi) : '';
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
@@ -227,7 +230,7 @@ function bindSettings() {
   on('units', 'change', (el) => (S().units = el.value as Settings['units']));
   on('printer-preset', 'change', (el) => {
     const p = PRINTER_PRESETS[+el.value];
-    S().printer = el.value !== '' && p ? `${p.brand} ${p.label}` : '';
+    S().printer = el.value !== '' && p ? presetKey(p) : '';
     if (el.value !== '' && p) S().dpi = p.dpi;
   });
   on('lens-preset', 'change', (el) => { if (el.value) S().lpi = +el.value; });
