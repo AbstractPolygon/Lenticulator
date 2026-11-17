@@ -247,4 +247,4 @@ export const PRINTER_PRESETS: { label: string; dpi: number; brand?: string }[] =
 ];
 
 /** Common lenticular sheet pitches. */
-export const LENS_PRESETS = [15, 20, 25, 30, 40, 50, 60, 62, 75, 100];
+export const LENS_PRESETS = [10, 15, 20, 25, 30, 40, 50, 60, 62, 75, 100, 120, 150, 161];

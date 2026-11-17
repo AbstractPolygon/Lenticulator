@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.43
+- More lens sheet presets: 10, 120, 150 and 161 LPI.
+
 ## 0.3.42
 - The Printer preset groups printers by brand (Canon, Epson, HP).
 
