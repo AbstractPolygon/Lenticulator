@@ -1,8 +1,11 @@
 # Changelog
 
+## 0.3.45
+- Printer presets are all listed by brand: each brand's plain resolutions (e.g. Epson 720 / 1440 / 2880 DPI) sit
+  under it next to its printers, and laser printers have their own group.
+
 ## 0.3.44
-- Printer presets are listed by brand only; the generic resolution entries are gone (type any DPI, or pick it
-  from the DPI field's list).
+- Printer presets are listed by brand (resolution entries removed; restored under their brands in 0.3.45).
 
 ## 0.3.43
 - More lens sheet presets: 10, 120, 150 and 161 LPI.
