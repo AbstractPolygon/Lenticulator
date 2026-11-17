@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.51
+- Printer presets for the 25 best-selling inkjet printers on Amazon (HP DeskJet, ENVY and OfficeJet Pro; Canon
+  PIXMA TR / TS and MegaTank; Brother Work Smart and INKvestment; Epson WorkForce Pro WF-4930).
+
 ## 0.3.50
 - Printer presets for Brother inkjets: MFC-J / DCP-J and INKvestment Tank.
 
