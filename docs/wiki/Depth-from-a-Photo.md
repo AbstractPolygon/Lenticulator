@@ -9,7 +9,7 @@ The **Depth** panel appears in **3D** mode.
 ## Steps
 
 1. Import a photo and select it in the frame list.
-2. Click **Estimate depth**. The depth map appears in the panel: white is near, black is far. Alternatively click **Load depth map** to use your own (for example from a phone's portrait mode); tick **Invert** if white means far in your map.
+2. Click **Estimate depth**. If the photo is an iPhone portrait-mode photo (JPEG or HEIC), its own depth map is used straight away; otherwise the depth is estimated. The depth map appears in the panel: white is near, black is far. Alternatively click **Load depth map** to use your own (for example from a phone's portrait mode); tick **Invert** if white means far in your map.
 3. Adjust:
    - **Frames**: how many views to generate. With **Match LPI** ticked, this is DPI ÷ LPI, one view per printed dot under each lens.
    - **Depth**: the strength of the effect, as total parallax in percent of the image width (default 2.5%). A lens shows about one lens pitch of parallax per frame cleanly (frames ÷ LPI inches in total); above that the panel shows **⚠ max …%** and the print will look blurred or doubled.

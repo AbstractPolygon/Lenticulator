@@ -118,6 +118,8 @@ export interface Frame {
   transform: FrameTransform;
   enabled: boolean;
   confidence?: number;
+  /** depth map stored in the photo itself (iPhone portrait), white = near */
+  depthMap?: Blob | null;
 }
 
 export interface AppState {

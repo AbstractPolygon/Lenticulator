@@ -47,3 +47,33 @@ function parseMpIndex(buf: Uint8Array, dv: DataView, tiff: number, end: number):
   }
   return ranges;
 }
+
+/** Width and height of the JPEG starting at `start` (from its SOF marker), or null. */
+export function jpegSize(buf: Uint8Array, start = 0): { w: number; h: number } | null {
+  if (buf[start] !== 0xff || buf[start + 1] !== 0xd8) return null;
+  let p = start + 2;
+  while (p + 9 < buf.length) {
+    if (buf[p] !== 0xff) return null;
+    const m = buf[p + 1];
+    if (m === 0xff) { p++; continue; } // fill byte
+    if (m === 0xd9 || m === 0xda) return null; // end of image / start of scan before any frame header
+    const len = (buf[p + 2] << 8) | buf[p + 3];
+    // SOF0–SOF15 except DHT (C4), JPG (C8) and DAC (CC)
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+      return { h: (buf[p + 5] << 8) | buf[p + 6], w: (buf[p + 7] << 8) | buf[p + 8] };
+    }
+    p += 2 + len;
+  }
+  return null;
+}
+
+/**
+ * Whether a JPEG is an auxiliary depth / disparity map, judged by its XMP (Apple portrait photos tag theirs with the
+ * depthData namespace or an auxiliary type naming depth or disparity). Mattes and HDR gain maps are not depth.
+ */
+export function isDepthJpeg(part: Uint8Array): boolean {
+  // the XMP sits in the header segments: look at the first 64 KB only
+  const head = new TextDecoder('latin1').decode(part.subarray(0, Math.min(part.length, 65536)));
+  if (/portraiteffectsmatte|hdrgainmap|semanticsegmentation/i.test(head)) return false;
+  return /ns\.apple\.com\/depthData|apdi:|aux:depth|aux:disparity|AuxiliaryImageType[^>]{0,80}(depth|disparity)/i.test(head);
+}

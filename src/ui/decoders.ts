@@ -188,3 +188,98 @@ async function decodeHeic(buf: ArrayBuffer): Promise<RawImage[]> {
   for (const i of images) i.free?.();
   return [{ width, height, data }];
 }
+
+/** The libheif module with its raw C exports (used for depth and auxiliary images, which the JS API doesn't cover). */
+interface HeifRaw {
+  heif_context_alloc(): { $$?: { ptr: number } };
+  heif_context_read_from_memory(ctx: unknown, buf: Uint8Array): unknown;
+  heif_context_free(ctx: unknown): void;
+  _malloc(n: number): number;
+  _free(p: number): void;
+  HEAPU8: Uint8Array;
+  HEAP32: Int32Array;
+  HEAPU32: Uint32Array;
+  [fn: `_heif_${string}`]: (...args: number[]) => number;
+}
+
+/**
+ * The depth map stored in a HEIC photo (iPhone portrait mode), as RGBA grey with white = near, or null.
+ * Looks for a depth image first, then an auxiliary image whose type names depth or disparity.
+ */
+export async function heicDepth(blob: Blob): Promise<RawImage | null> {
+  const L = (await loadHeif()) as unknown as HeifRaw;
+  if (typeof L._heif_image_handle_has_depth_image !== 'function') return null;
+  const ctx = L.heif_context_alloc();
+  const ptrs: number[] = [];
+  const alloc = (n: number) => { const p = L._malloc(n); ptrs.push(p); return p; };
+  const releaseHandles: number[] = [];
+  try {
+    L.heif_context_read_from_memory(ctx, new Uint8Array(await blob.arrayBuffer()));
+    const ctxPtr = ctx.$$?.ptr;
+    if (!ctxPtr) return null;
+    // C functions that return a struct heif_error take a pointer for it as their first argument
+    const err = alloc(16), out = alloc(4);
+    const ok = () => L.HEAP32[err >> 2] === 0;
+    L._heif_context_get_primary_image_handle(err, ctxPtr, out);
+    if (!ok()) return null;
+    const main = L.HEAPU32[out >> 2];
+    releaseHandles.push(main);
+    let depth = 0;
+    const nd = L._heif_image_handle_get_number_of_depth_images(main);
+    if (nd > 0) {
+      const ids = alloc(4 * nd);
+      L._heif_image_handle_get_list_of_depth_image_IDs(main, ids, nd);
+      L._heif_image_handle_get_depth_image_handle(err, main, L.HEAPU32[ids >> 2], out);
+      if (ok()) depth = L.HEAPU32[out >> 2];
+    }
+    if (!depth) {
+      const na = L._heif_image_handle_get_number_of_auxiliary_images(main, 0);
+      if (na > 0) {
+        const ids = alloc(4 * na), typePtr = alloc(4);
+        L._heif_image_handle_get_list_of_auxiliary_image_IDs(main, 0, ids, na);
+        for (let i = 0; i < na && !depth; i++) {
+          L._heif_image_handle_get_auxiliary_image_handle(err, main, L.HEAPU32[(ids >> 2) + i], out);
+          if (!ok()) continue;
+          const aux = L.HEAPU32[out >> 2];
+          L._heif_image_handle_get_auxiliary_type(err, aux, typePtr);
+          let type = '';
+          if (ok()) {
+            const s = L.HEAPU32[typePtr >> 2];
+            let e = s;
+            while (L.HEAPU8[e]) e++;
+            type = new TextDecoder().decode(L.HEAPU8.subarray(s, e));
+            L._heif_image_handle_release_auxiliary_type(aux, typePtr);
+          }
+          if (/depth|disparity/i.test(type) && !/matte|gainmap/i.test(type)) depth = aux;
+          else L._heif_image_handle_release(aux);
+        }
+      }
+    }
+    if (!depth) return null;
+    releaseHandles.push(depth);
+    // decode in the image's own format and read its luma / grey plane
+    L._heif_decode_image(err, depth, out, 99, 99, 0);
+    if (!ok()) return null;
+    const img = L.HEAPU32[out >> 2];
+    try {
+      const stride = alloc(4);
+      const plane = L._heif_image_get_plane_readonly(img, 0, stride);
+      const w = L._heif_image_get_width(img, 0), h = L._heif_image_get_height(img, 0), st = L.HEAP32[stride >> 2];
+      if (!plane || w <= 0 || h <= 0) return null;
+      const data = new Uint8ClampedArray(w * h * 4);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const v = L.HEAPU8[plane + y * st + x];
+        data.set([v, v, v, 255], (y * w + x) * 4);
+      }
+      return { width: w, height: h, data };
+    } finally {
+      L._heif_image_release(img);
+    }
+  } catch {
+    return null;
+  } finally {
+    for (const h of releaseHandles) L._heif_image_handle_release(h);
+    for (const p of ptrs) L._free(p);
+    L.heif_context_free(ctx);
+  }
+}

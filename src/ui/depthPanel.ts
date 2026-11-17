@@ -72,6 +72,12 @@ export function initDepthPanel(api: DepthPanelApi) {
   async function estimate() {
     const f = api.selFrame() ?? api.frames()[0];
     if (!f) return api.status('Select a photo first.', 'error');
+    if (f.depthMap) {
+      // the photo carries its own depth map (iPhone portrait mode): more accurate than estimating, and instant
+      await loadMap(f.depthMap, 'depth map');
+      if (source) api.status('Using the depth map stored in the photo.');
+      return;
+    }
     api.setBusy(true);
     api.progress(0);
     try {
@@ -102,18 +108,18 @@ export function initDepthPanel(api: DepthPanelApi) {
     }
   }
 
-  async function loadMap(file: File) {
+  async function loadMap(file: Blob, name = (file as File).name ?? 'depth map') {
     const f = api.selFrame() ?? api.frames()[0];
     if (!f) return api.status('Select a photo first.', 'error');
     try {
-      const bmp = await api.decodeAny(file, file.name);
+      const bmp = await api.decodeAny(file, name);
       const k = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
       const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
       const px = imagePixels(bmp, w, h);
       bmp.close();
       setSource({ name: f.name, bitmap: await createImageBitmap(f.bitmap), depth: rgbaToGray(px.data, w, h) });
     } catch (e) {
-      api.status(`Could not open ${file.name}: ${(e as Error).message}`, 'error', 6000);
+      api.status(`Could not open ${name}: ${(e as Error).message}`, 'error', 6000);
     }
   }
 

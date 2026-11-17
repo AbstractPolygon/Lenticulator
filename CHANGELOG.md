@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.38
+- iPhone portrait photos: the depth map stored in the photo (JPEG or HEIC) is kept with it, and **Estimate depth**
+  uses it directly (instant, and more accurate than estimating).
+- Fix: an iPhone portrait JPEG no longer imports as several frames (photo, depth map, matte); only 3D-camera MPOs,
+  whose images are all the same size, split into views.
+
 ## 0.3.37
 - Video import: importing a video (MP4, MOV, M4V, WebM), such as the MOV of an iPhone Live Photo, takes evenly
   spaced frames (Settings → Import → Video frames, default 10).

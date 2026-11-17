@@ -16,7 +16,7 @@ Create interlaced images for **lenticular prints**: 3D, flip and animation effec
   - Manual fine-tuning: drag in the Align view, use the arrow keys, or type X/Y/rotation/scale. The view has onion-skin, difference, flicker and anaglyph overlays.
 - **Depth from a single photo** (3D mode → Depth panel): click **Estimate depth** to compute a depth map
   on your device with [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small)
-  (Apache-2.0, about 27 MB, bundled with the app in `public/models/`; it works offline), or **Load depth map** to use your own
+  (Apache-2.0, about 27 MB, bundled with the app in `public/models/`; it works offline), or **Load depth map** to use your own. iPhone portrait photos (JPEG or HEIC) bring their own depth map, which **Estimate depth** uses directly
   (white = near; tick Invert for maps where white = far). Set **Depth** (total parallax as a % of the width) and
   **Focus** (which depth sits at the print surface; it shows as a yellow line on the depth preview), then
   **Generate frames**. With **Match LPI** ticked, the number of frames follows DPI ÷ LPI, one view per printed

@@ -1,4 +1,4 @@
-import { mpoImageRanges } from '../core/mpo';
+import { isDepthJpeg, jpegSize, mpoImageRanges } from '../core/mpo';
 import { canvas2d } from './canvas';
 
 /** Image import helpers. */
@@ -8,17 +8,28 @@ import { canvas2d } from './canvas';
  * Fujifilm W1/W3 and Nintendo 3DS) into its individual JPEGs.
  * Returns [blob] unchanged for ordinary images.
  */
-export async function splitMultiPicture(file: Blob): Promise<Blob[]> {
+/**
+ * The images in a JPEG file: several views for a 3D-camera MPO, otherwise just the photo. An embedded depth map
+ * (iPhone portrait photos keep one, smaller, among their extra MPF images) is returned separately; the other extra
+ * images (portrait matte, HDR gain map, previews) are ignored.
+ */
+export async function splitMultiPicture(file: Blob): Promise<{ parts: Blob[]; depth: Blob | null }> {
   const buf = new Uint8Array(await file.arrayBuffer());
-  if (buf[0] !== 0xff || buf[1] !== 0xd8) return [file];
-  // proper MPO: use the MP Index (handles padding between images, skips nothing it lists)
+  if (buf[0] !== 0xff || buf[1] !== 0xd8) return { parts: [file], depth: null };
+  // proper MPF: use the MP Index (handles padding between images, skips nothing it lists)
   const ranges = mpoImageRanges(buf);
   if (ranges) {
-    const parts = ranges
-      .map(([a, b]) => buf.subarray(a, b))
-      .filter((part) => part.length > 20_000 && part[0] === 0xff && part[1] === 0xd8)
-      .map((part) => new Blob([part as BlobPart], { type: 'image/jpeg' }));
-    if (parts.length > 1) return parts;
+    const imgs = ranges.map(([a, b]) => buf.subarray(a, b)).filter((part) => part[0] === 0xff && part[1] === 0xd8);
+    const main = jpegSize(buf);
+    const depthPart = imgs.slice(1).find((part) => isDepthJpeg(part));
+    const depth = depthPart ? new Blob([depthPart as BlobPart], { type: 'image/jpeg' }) : null;
+    // 3D views are the same size as the first image; anything else is auxiliary
+    const views = imgs.filter((part) => {
+      const s = jpegSize(part);
+      return part.length > 20_000 && !!s && !!main && s.w === main.w && s.h === main.h && !isDepthJpeg(part);
+    });
+    if (views.length > 1) return { parts: views.map((v) => new Blob([v as BlobPart], { type: 'image/jpeg' })), depth };
+    return { parts: [file], depth };
   }
   // fallback: JPEGs concatenated directly (EOI immediately followed by SOI)
   const starts: number[] = [0];
@@ -28,14 +39,14 @@ export async function splitMultiPicture(file: Blob): Promise<Blob[]> {
       starts.push(i);
     }
   }
-  if (starts.length < 2) return [file];
+  if (starts.length < 2) return { parts: [file], depth: null };
   const parts: Blob[] = [];
   for (let k = 0; k < starts.length; k++) {
     const part = buf.subarray(starts[k], k + 1 < starts.length ? starts[k + 1] : buf.length);
     // skip embedded thumbnails / tiny previews
     if (part.length > 20_000) parts.push(new Blob([part], { type: 'image/jpeg' }));
   }
-  return parts.length ? parts : [file];
+  return { parts: parts.length ? parts : [file], depth: null };
 }
 
 export async function decode(blob: Blob): Promise<ImageBitmap> {

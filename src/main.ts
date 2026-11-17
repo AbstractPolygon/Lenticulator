@@ -10,7 +10,7 @@ import {
   AppState, Frame, MODE_DEFAULTS, SIZE_PRESETS, matchPreset, Settings, framing, hexToRgb, loadSettings, outputPixels, saveSettings,
 } from './ui/state';
 import { base64ToBlob, blobToBase64, decode, filesFromDrop, isImageFile, splitMultiPicture, thumbnail, uid } from './ui/images';
-import { decodeSpecial, sniffBlob } from './ui/decoders';
+import { decodeSpecial, heicDepth, sniffBlob } from './ui/decoders';
 import { Rect, ViewState } from './ui/view';
 import type { WorkerResponse } from './worker';
 import { RenderResult, download, inArtifactHost, printResult, toJpeg, toPdf, toPng, toTiff } from './ui/export';
@@ -353,8 +353,14 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
       if (kind) {
         // HEIC opens natively in Safari; otherwise (and for TIFF/PSD) use the bundled decoders
         const native = kind === 'heic' ? await decode(file).catch(() => null) : null;
+        // iPhone portrait HEICs carry a depth map: keep it with the photo for the Depth panel
+        const withDepth = async (fr: Frame) => {
+          if (kind !== 'heic') return;
+          const d = await heicDepth(file).catch(() => null);
+          if (d) fr.depthMap = await encodeBitmap(await rgbaToBitmap(d.data, d.width, d.height), 'image/png');
+        };
         if (native) {
-          await addFrame(file, baseName, NO_TRANSFORM, true, native);
+          await withDepth(await addFrame(file, baseName, NO_TRANSFORM, true, native));
           added++;
           continue;
         }
@@ -362,7 +368,7 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
         const raws = await decodeSpecial(file, kind, { psdLayers: S().psdLayers, tiffAllPages: S().tiffAllPages });
         if (raws.length === 1) {
           // keep the original file (smaller project files); it is decoded again on load
-          await addFrame(file, baseName, NO_TRANSFORM, true, await rgbaToBitmap(raws[0].data, raws[0].width, raws[0].height));
+          await withDepth(await addFrame(file, baseName, NO_TRANSFORM, true, await rgbaToBitmap(raws[0].data, raws[0].width, raws[0].height)));
           added++;
         } else {
           // pages / layers become separate lossless PNG frames
@@ -374,10 +380,11 @@ async function importFiles(files: Iterable<File | Blob>, names?: string[]) {
         }
         continue;
       }
-      const parts = await splitMultiPicture(file);
+      const { parts, depth } = await splitMultiPicture(file);
       for (let p = 0; p < parts.length; p++) {
         const blob = parts.length > 1 ? parts[p] : file;
-        await addFrame(blob, parts.length > 1 ? `${baseName} [${p + 1}]` : baseName);
+        const fr = await addFrame(blob, parts.length > 1 ? `${baseName} [${p + 1}]` : baseName);
+        if (depth && parts.length === 1) fr.depthMap = depth;
         added++;
       }
     } catch (e) {
