@@ -12,6 +12,8 @@ export interface Settings {
   heightIn: number;
   units: 'in' | 'mm';
   dpi: number;
+  /** picked printer preset ("Brand model"), '' for none */
+  printer: string;
   lpi: number;
   orientation: Orientation;
   sampling: Sampling;
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   heightIn: 4,
   units: 'in',
   dpi: 600,
+  printer: '',
   lpi: 60,
   orientation: 'vertical',
   sampling: 'blend',

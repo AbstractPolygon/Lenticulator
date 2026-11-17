@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.44
+- Printer presets are listed by brand only; the generic resolution entries are gone (type any DPI, or pick it
+  from the DPI field's list).
+
 ## 0.3.43
 - More lens sheet presets: 10, 120, 150 and 161 LPI.
 

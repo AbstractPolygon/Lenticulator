@@ -89,12 +89,10 @@ function fillStaticOptions() {
   const opts = (px: boolean) => SIZE_PRESETS.map((p, i) => (!!p.px === px ? `<option value="${i}">${p.label}</option>` : '')).join('');
   preset.innerHTML = `<option value="">Custom</option><optgroup label="Print">${opts(false)}</optgroup><optgroup label="Social">${opts(true)}</optgroup>`;
   $('dpi-list').innerHTML = COMMON_DPI.map((d) => `<option value="${d}">`).join('');
-  const printers = (brand?: string) => PRINTER_PRESETS.map((p, i) =>
-    (p.brand === brand ? `<option value="${i}"${brand ? ` title="${p.dpi} DPI"` : ''}>${p.label}</option>` : '')).join('');
-  const brands = [...new Set(PRINTER_PRESETS.map((p) => p.brand).filter((b): b is string => !!b))];
-  $('printer-preset').innerHTML = '<option value="">Custom</option>'
-    + brands.map((b) => `<optgroup label="${b}">${printers(b)}</optgroup>`).join('')
-    + `<optgroup label="Resolution">${printers()}</optgroup>`;
+  const brands = [...new Set(PRINTER_PRESETS.map((p) => p.brand))];
+  $('printer-preset').innerHTML = '<option value="">Custom</option>' + brands.map((b) => `<optgroup label="${b}">${
+    PRINTER_PRESETS.map((p, i) => (p.brand === b ? `<option value="${i}" title="${p.dpi} DPI">${p.label}</option>` : '')).join('')
+  }</optgroup>`).join('');
   $('lens-preset').innerHTML = '<option value="">Custom</option>' + LENS_PRESETS.map((l) => `<option value="${l}">${l} LPI</option>`).join('');
   $('lpi-list').innerHTML = COMMON_LPI.map((d) => `<option value="${d}">`).join('');
 }
@@ -166,12 +164,9 @@ function syncForm() {
   const pi = matchPreset(s);
   // printer / lens presets show the one matching the typed values (a printer keeps its pick when DPIs are shared)
   const pp = $<HTMLSelectElement>('printer-preset');
-  if (!(pp.value !== '' && PRINTER_PRESETS[+pp.value]?.dpi === s.dpi)) {
-    // a typed DPI shows the generic resolution, not whichever printer model happens to share it
-    const g = PRINTER_PRESETS.findIndex((p) => !p.brand && p.dpi === s.dpi);
-    const k = g >= 0 ? g : PRINTER_PRESETS.findIndex((p) => p.dpi === s.dpi);
-    pp.value = k >= 0 ? String(k) : '';
-  }
+  // the picked printer, while the DPI is still its own; a typed DPI shows Custom (many printers share one)
+  const k = PRINTER_PRESETS.findIndex((p) => `${p.brand} ${p.label}` === s.printer && p.dpi === s.dpi);
+  pp.value = k >= 0 ? String(k) : '';
   $<HTMLSelectElement>('lens-preset').value = LENS_PRESETS.includes(s.lpi) ? String(s.lpi) : '';
   $<HTMLSelectElement>('size-preset').value = pi >= 0 ? String(pi) : '';
   document.querySelectorAll<HTMLButtonElement>('#effect-mode [data-mode]').forEach((b) =>
@@ -226,7 +221,11 @@ function bindSettings() {
   on('width', 'change', (el) => (S().widthIn = pos(el.value, S().widthIn * unitFactor()) / unitFactor()));
   on('height', 'change', (el) => (S().heightIn = pos(el.value, S().heightIn * unitFactor()) / unitFactor()));
   on('units', 'change', (el) => (S().units = el.value as Settings['units']));
-  on('printer-preset', 'change', (el) => { const p = PRINTER_PRESETS[+el.value]; if (el.value !== '' && p) S().dpi = p.dpi; });
+  on('printer-preset', 'change', (el) => {
+    const p = PRINTER_PRESETS[+el.value];
+    S().printer = el.value !== '' && p ? `${p.brand} ${p.label}` : '';
+    if (el.value !== '' && p) S().dpi = p.dpi;
+  });
   on('lens-preset', 'change', (el) => { if (el.value) S().lpi = +el.value; });
   on('dpi', 'change', (el) => {
     const social = SIZE_PRESETS[matchPreset(S())];
