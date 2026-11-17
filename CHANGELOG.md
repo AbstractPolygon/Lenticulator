@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.41
+- Printer presets for popular photo printers: Canon PIXMA, PIXMA PRO-200 / PRO-100, imagePROGRAF PRO-300 and
+  SELPHY; Epson EcoTank Photo, Expression Photo and SureColor P700 / P900; HP ENVY / Smart Tank.
+
 ## 0.3.40
 - **Split scan** lists known film cameras by name (Nimslo 3D, Nishika N8000 / N9000, Vivitar 3D, Reto3D,
   ImageTech 3D Wizard, Loreo 3D); 2, 3 or 4 frames are still there for other cameras.
