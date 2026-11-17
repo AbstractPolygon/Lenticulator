@@ -234,16 +234,11 @@ export const PRINTER_PRESETS: { brand?: string; label: string; dpi: number }[] =
   { brand: 'Canon', label: 'SELPHY', dpi: 300 },
   { brand: 'Epson', label: 'EcoTank Photo', dpi: 720 },
   { brand: 'Epson', label: 'Expression Photo', dpi: 720 },
+  { brand: 'Epson', label: 'Stylus Photo', dpi: 720 },
   { brand: 'Epson', label: 'SureColor P700 / P900', dpi: 720 },
   { brand: 'HP', label: 'ENVY / Smart Tank', dpi: 600 },
-  { label: 'Epson 720', dpi: 720 },
-  { label: 'Epson 1440', dpi: 1440 },
-  { label: 'Epson 2880', dpi: 2880 },
-  { label: 'Canon / HP 600', dpi: 600 },
-  { label: 'Canon / HP 1200', dpi: 1200 },
-  { label: 'Canon / HP 2400', dpi: 2400 },
-  { label: 'Laser 600', dpi: 600 },
-  { label: 'Laser 1200', dpi: 1200 },
+  // plain resolutions: the common printer DPIs
+  ...COMMON_DPI.map((dpi) => ({ label: String(dpi), dpi })),
 ];
 
 /** Common lenticular sheet pitches. */

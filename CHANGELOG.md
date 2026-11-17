@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.48
+- Printer presets: the Resolution group lists the common DPIs (300 – 2880) without brand names.
+- Printer preset for the Epson Stylus Photo series.
+
 ## 0.3.47
 - Printer presets: back to printers grouped by brand plus a separate Resolution group (Epson 720 / 1440 / 2880,
   Canon / HP 600 / 1200 / 2400, Laser 600 / 1200).
