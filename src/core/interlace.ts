@@ -228,6 +228,8 @@ export const COMMON_DPI = [300, 360, 600, 720, 1200, 1440, 2400, 2880];
 
 /** Printers by brand, with their native resolution (the DPI to use), then plain resolutions (no brand). */
 export const PRINTER_PRESETS: { brand?: string; label: string; dpi: number }[] = [
+  { brand: 'Brother', label: 'MFC-J / DCP-J', dpi: 600 },
+  { brand: 'Brother', label: 'INKvestment Tank', dpi: 600 },
   { brand: 'Canon', label: 'PIXMA', dpi: 600 },
   { brand: 'Canon', label: 'PIXMA PRO-200 / PRO-100', dpi: 600 },
   { brand: 'Canon', label: 'imagePROGRAF PRO-300', dpi: 600 },

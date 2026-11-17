@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.50
+- Printer presets for Brother inkjets: MFC-J / DCP-J and INKvestment Tank.
+
 ## 0.3.49
 - Printer presets: the Resolution entries read "600 DPI" etc. again.
 
