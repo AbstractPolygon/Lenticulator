@@ -22,7 +22,7 @@ Theme, rendering and panel location are remembered per device.
 
 ## Projects
 
-**Save project** writes a single `project.lenti.json` file with all frames (original image data), alignment, the reference frame, the key point and all print settings. **Open project** restores it.
+**Save project** writes a single `project.lenti.json` file with all frames (original image data), alignment, the reference frame, the key point, all print settings and any depth map stored in an iPhone portrait photo. **Open project** restores it.
 
 ## About
 

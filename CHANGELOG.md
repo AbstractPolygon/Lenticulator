@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.39
+- Projects keep the depth map stored in iPhone portrait photos, so **Estimate depth** still uses it after
+  reopening a saved project.
+
 ## 0.3.38
 - iPhone portrait photos: the depth map stored in the photo (JPEG or HEIC) is kept with it, and **Estimate depth**
   uses it directly (instant, and more accurate than estimating).

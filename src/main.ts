@@ -1459,7 +1459,11 @@ interface ProjectFile {
   settings: Settings;
   refIndex: number;
   keyPoint: AppState['keyPoint'];
-  frames: { name: string; type: string; data: string; transform: FrameTransform; enabled: boolean }[];
+  frames: {
+    name: string; type: string; data: string; transform: FrameTransform; enabled: boolean;
+    /** depth map stored in the photo (iPhone portrait), if any */
+    depth?: { type: string; data: string };
+  }[];
 }
 
 async function saveProject() {
@@ -1475,6 +1479,7 @@ async function saveProject() {
       state.frames.map(async (f) => ({
         name: f.name, type: f.blob.type || 'image/jpeg', data: await blobToBase64(f.blob),
         transform: f.transform, enabled: f.enabled,
+        ...(f.depthMap ? { depth: { type: f.depthMap.type || 'image/png', data: await blobToBase64(f.depthMap) } } : {}),
       })),
     ),
   };
@@ -1496,7 +1501,10 @@ async function openProject(file: File) {
     setResult(null);
     state.settings = { ...loadSettings(), ...proj.settings };
     saveSettings(S());
-    for (const f of proj.frames) await addFrame(base64ToBlob(f.data, f.type), f.name, f.transform, f.enabled);
+    for (const f of proj.frames) {
+      const fr = await addFrame(base64ToBlob(f.data, f.type), f.name, f.transform, f.enabled);
+      if (f.depth) fr.depthMap = base64ToBlob(f.depth.data, f.depth.type);
+    }
     state.refId = state.frames[proj.refIndex]?.id ?? state.frames[0]?.id ?? null;
     state.selectedId = state.refId;
     state.keyPoint = proj.keyPoint;
