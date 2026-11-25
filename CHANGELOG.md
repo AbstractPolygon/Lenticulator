@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.54
+- The Framing & page settings (fit, background, zoom, pan, margin, alignment bars, crop marks) moved into the
+  Print & lens panel.
+
 ## 0.3.53
 - **Crop to overlap** is now a checkbox (replacing the button and the separate Auto crop option): checking it crops
   to the area every frame covers, and unchecking it restores the previous framing.

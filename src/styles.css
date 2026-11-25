@@ -125,6 +125,7 @@ body {
 .panel[open] > summary::before { transform: rotate(90deg); }
 .panel > *:not(summary) { margin-left: 10px; margin-right: 10px; }
 .panel > *:last-child { margin-bottom: 10px; }
+.panel > .grid2 + .grid2 { margin-top: 10px; }
 
 label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
 label.check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); }

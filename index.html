@@ -178,6 +178,21 @@
               <input id="phase" title="Shifts the strips under the lenses; changes which frame is seen head-on" type="range" min="0" max="1" step="0.01" />
             </label>
           </div>
+          <div class="grid2">
+            <label>Fit
+              <select id="fit" title="Fill: crop to fill the print. Fit: show the whole image with borders"><option value="cover">Fill</option><option value="contain">Fit</option></select>
+            </label>
+            <label>Background <input id="bg" title="Colour used where an image doesn&#x27;t cover the print" type="color" /></label>
+            <label class="full">Zoom <span class="val" id="zoom-val"></span>
+              <input id="zoom" title="Enlarge the image within the print area" type="range" min="1" max="3" step="0.01" />
+            </label>
+            <label class="full">Pan X <input id="panX" title="Move the image left/right within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label class="full">Pan Y <input id="panY" title="Move the image up/down within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
+            <label>Margin <input id="margin" title="White border around the image, for alignment bars and crop marks" type="number" min="0" step="0.05" /></label>
+            <span></span>
+            <label class="check"><input id="alignBars" title="Strips in the margin printed at the lens pitch. Rotate the lens sheet until they look uniform to line it up" type="checkbox" /> Lens alignment bars</label>
+            <label class="check"><input id="cropMarks" title="Corner marks showing where to cut" type="checkbox" /> Crop marks</label>
+          </div>
           <div id="lens-info" class="info"></div>
           <datalist id="dpi-list"></datalist>
           <datalist id="lpi-list"></datalist>
@@ -262,26 +277,6 @@
               <label>Scale <input id="t-scale" title="Scale of the selected frame" type="number" step="0.001" min="0.2" max="5" /></label>
             </div>
           </fieldset>
-        </details>
-
-        <!-- FRAMING -->
-        <details class="panel">
-          <summary>Framing &amp; page</summary>
-          <div class="grid2">
-            <label>Fit
-              <select id="fit" title="Fill: crop to fill the print. Fit: show the whole image with borders"><option value="cover">Fill</option><option value="contain">Fit</option></select>
-            </label>
-            <label>Background <input id="bg" title="Colour used where an image doesn&#x27;t cover the print" type="color" /></label>
-            <label class="full">Zoom <span class="val" id="zoom-val"></span>
-              <input id="zoom" title="Enlarge the image within the print area" type="range" min="1" max="3" step="0.01" />
-            </label>
-            <label class="full">Pan X <input id="panX" title="Move the image left/right within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
-            <label class="full">Pan Y <input id="panY" title="Move the image up/down within the print area" type="range" min="-0.5" max="0.5" step="0.005" /></label>
-            <label>Margin <input id="margin" title="White border around the image, for alignment bars and crop marks" type="number" min="0" step="0.05" /></label>
-            <span></span>
-            <label class="check"><input id="alignBars" title="Strips in the margin printed at the lens pitch. Rotate the lens sheet until they look uniform to line it up" type="checkbox" /> Lens alignment bars</label>
-            <label class="check"><input id="cropMarks" title="Corner marks showing where to cut" type="checkbox" /> Crop marks</label>
-          </div>
         </details>
 
         <!-- TEST PATTERNS -->
