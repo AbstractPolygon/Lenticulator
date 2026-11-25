@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.55
+- The Frames panel is now called Images.
+
 ## 0.3.54
 - The Framing & page settings (fit, background, zoom, pan, margin, alignment bars, crop marks) moved into the
   Print & lens panel.
